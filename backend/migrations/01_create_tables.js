@@ -27,7 +27,7 @@ exports.up = async function(knex){
 
     await knex.schema.createTable('tb_sistema_usuario_perfil', (table) => {
         table.bigIncrements('id').primary();
-        table.bigInteger('id_usuario').references('id').inTable('tb_sistemas_usuario').notNullable();
+        table.bigInteger('id_usuario').references('id').inTable('tb_sistema_usuario').notNullable();
         table.specificType('perfil', 'TIPO_PERFIL').notNullable();
     });
 
@@ -46,7 +46,7 @@ exports.up = async function(knex){
 
     await knex.schema.createTable('tb_loja', (table) => {
         table.bigIncrements('id').primary();
-        table.bigInteger('id_conta').references('id').inTable('tb_sistena_conta').notNullable();
+        table.bigInteger('id_conta').references('id').inTable('tb_sistema_conta').notNullable();
         table.bigInteger('id_usuario').references('id').inTable('tb_sistema_usuario').notNullable();
         table.timestamp('dh_inc').notNullable().defaultTo(knex.fn.now());
         table.string('cnpj').notNullable().unique();
@@ -67,8 +67,9 @@ exports.up = async function(knex){
         table.string('cep').notNullable();
     });
 
+};
 
-    exports.down = async function(knex){
+exports.down = async function(knex){
 
         await knex.schema
             .dropTableIfExists('tb_loja_endereco')
@@ -81,5 +82,4 @@ exports.up = async function(knex){
             await knex.raw('DROP TYPE IF EXISTS TIPO_PERFIL');
             await knex.raw('DROP TYPE IF EXISTS TIPO_CAMPANHA');
             await knex.raw('DROP TYPE IF EXISTS TIPO_STATUS_PEDIDO');
-    };
-}
+};
