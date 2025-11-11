@@ -1,4 +1,4 @@
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcryptjs'); // Chama o bcrypt
 
 exports.seed = async function(knex){
 
@@ -12,14 +12,14 @@ exports.seed = async function(knex){
     ]).returning('id');
     const idConta = conta.id;
 
-    const senhaHash = await bcrypt.hash('123', 10)
+    const senhaHash = await bcrypt.hash('123', 10) // Criptografamos a nossa senha falsa
 
     const [userFornecedor1] = await knex('tb_sistema_usuario').insert([
-        { id_conta: idConta, email: 'user1teste@gmail.com', senha: senhaHash}
+        { id_conta: idConta, email: 'user1teste@gmail.com', senha: senhaHash} // Inserindo fornecedor com a senha criptografada
     ]).returning('id');
 
     const [userFornecedor2] = await knex('tb_sistema_usuario').insert([
-        { id_conta: idConta, email: 'user2teste@gmail.com', senha: senhaHash}
+        { id_conta: idConta, email: 'user2teste@gmail.com', senha: senhaHash} // Inserindo fornecedor com a senha criptografada
     ]).returning('id');
 
     await knex('tb_sistema_usuario_perfil').insert([

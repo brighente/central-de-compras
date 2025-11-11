@@ -2,26 +2,75 @@ const express = require('express');
 const cors = require('cors'); // O "porteiro" que deixa o React chamar a API
 const knexConfig = require('./knexfile').development; // Pega a config do banco
 const knex = require('knex')(knexConfig); // Inicializa o Knex
+const bcrypt = require('bcryptjs') // Inicializa o bcrypt
+const jwt = require('jsonwebtoken') // Inicializa o JsonWebToken
 
+const JWT_SECRET = 'projeto-central-compras-abacate'
 
 const app = express();
-
 
 app.use(cors()); // Diz ao Express para usar o "porteiro" CORS
 app.use(express.json()); // Diz ao Express para entender JSON
 
-
+// Get fornecedores
+// Quando acessado essa rota, o SQL do knex será executado, retornando os fornecedores
 app.get('/api/fornecedores', async (req, res) => {
   console.log("LOG: Recebi uma requisição para /api/fornecedores");
   
   try {
-    const fornecedores = await knex('tb_fornecedor').select('id', 'nome_fantasia');
-    res.json(fornecedores);
+    const fornecedores = await knex('tb_fornecedor').select('id', 'nome_fantasia'); // SELECT id, nome_fantasia FROM tb_fornecedor
+    res.json(fornecedores); // Transformando a resposta do SQL em JSON
 
   } catch (err) {
     console.error("Erro ao buscar no banco:", err);
     res.status(500).json({ message: 'Erro no servidor ao buscar fornecedores.' });
   }
+});
+
+
+// Post para realização de Login do usuário
+
+app.post('/api/login', async (req, res) => {
+    console.log("LOG: Recebi uma tentativa de login");
+
+    const {email, senha} = req.body;
+
+    if(!email || !senha){
+        return res.status(400).json({message: 'Email e senha são obrigatórios.'});
+    }
+
+    try {
+        const usuario = await knex('tb_sistema_usuario').where({email: email}).first();
+        if(!usuario){
+            return res.status(401).json({message: 'Email ou senha inválidos!'})
+        }
+
+        const senhaCorreta = await bcrypt.compare(senha, usuario.senha);
+        if(!senhaCorreta){
+            return res.status(401).json({message: 'Email ou senha inválidos!'})
+        }
+
+        const token = jwt.sign(
+            {
+                userId: usuario.id,
+                email: usuario.email
+            },
+            JWT_SECRET,
+            {
+                expiresIn: '1h'    
+            }
+        );
+
+        console.log("LOG: Login bem sucedido para:", email);
+        res.json({
+            message: 'Login bem sucedido!',
+            token
+        });
+
+    } catch (err){
+        console.error("Erro no login: ", err);
+        res.status(500).json({message: 'Erro interno no servidor!'});
+    }
 });
 
 app.listen(3001, () => {
