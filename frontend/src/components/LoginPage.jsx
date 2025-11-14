@@ -1,19 +1,21 @@
-import React, {useState} from "react";
+import React, { useState, useContext } from "react"; // Ferramentas para poder usar Estado e Context
+import AuthContext from "../context/AuthContext";  // Importamos nosso Context (cerebro)
 
 function LoginPage() {
     const [email, setEmail] = useState('');
     const [senha, setSenha] = useState('');
-
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
-    const handleSubmit = async (evento) => {
-        evento.preventDefault();
+    const { login } = useContext(AuthContext);  // Pegamos a função de login do nosso Context
+
+    const handleSubmit = async (evento) => {  // Criamos a função handleSubmit, que fará as ações relacionadas ao envio do formulário de login
+        evento.preventDefault();  // Evita de recarregar a página quando for enviado o formulário
         setError('');
         setLoading(true);
 
         try{
-            const response = await fetch('http://localhost:3001/api/login', {
+            const response = await fetch('http://localhost:3001/api/login', {  // Enviamos um json de login para a rota de login no backend
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -21,7 +23,7 @@ function LoginPage() {
                 body: JSON.stringify({email, senha})
             });
 
-            const data = await response.json();
+            const data = await response.json(); // Transformamos a resposta em json
 
             if(!response.ok){
                 throw new Error(data.message || "Erro ao fazer login!");
@@ -29,9 +31,7 @@ function LoginPage() {
 
             setLoading(false);
             console.log("LOGIN BEM SUCEDIDO!");
-            console.log("Token reconhecido: ", data.token);
-            alert('Login feito com sucesso! Token no console.');
-            localStorage.setItem('authToken', data.token);
+            login(data.token) // Chama a função login do AuthContext, que salva o token no localStorage e no Estado
 
         } catch (err){
             setLoading(false);
