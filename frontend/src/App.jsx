@@ -1,16 +1,35 @@
-// frontend/src/App.jsx
-
-import React from 'react';
+import React, { useContext } from 'react';  // Ferramenta para poder usar um Context
 import LoginPage from './components/LoginPage'; // 1. Importa o novo componente
+import AuthContext from './context/AuthContext'; // Importamos o nosso Context (cerebro)
 
-function App() {
+import AdminDashboard from './components/AdminDashboard';
+import FornecedorDashboard from './components/FornecedorDashboard';
+import LojaDashboard from './components/LojaDashboard';
+
+const renderDashboard = (user) =>{
+    switch(user?.perfil){
+        case 'ADMIN':
+            return <AdminDashboard />
+        case 'FORNECEDOR':
+            return <FornecedorDashboard />
+        case 'LOJA':
+            return <LojaDashboard />
+        default:
+            return <LoginPage />
+    }
+};
+
+
+function App(){
   
-  // 2. Por enquanto, vamos mostrar SÓ a página de login
-  return (
-    <div className="App">
-      <LoginPage />
-    </div>
-  );
+    const { authState } = useContext(AuthContext); // Pega o Estado do usuário, usando o useContext (Cerebro)
+
+    // Se não tiver user (deslogado), mostra a tela de login, se tiver user (logado), mostra o dashboard
+    return (
+        <div className="App">
+            {!authState ? <LoginPage /> : renderDashboard(authState.user)}
+        </div>
+    );
 }
 
 export default App;

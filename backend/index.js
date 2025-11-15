@@ -4,6 +4,7 @@ const knexConfig = require('./knexfile').development; // Pega a config do banco
 const knex = require('knex')(knexConfig); // Inicializa o Knex
 const bcrypt = require('bcryptjs') // Inicializa o bcrypt
 const jwt = require('jsonwebtoken') // Inicializa o JsonWebToken
+const authMiddleware = require('./authMiddleware'); // Importa o authMiddleware
 
 const JWT_SECRET = 'projeto-central-compras-abacate'
 
@@ -40,7 +41,10 @@ app.post('/api/login', async (req, res) => {
     }
 
     try {
-        const usuario = await knex('tb_sistema_usuario').where({email: email}).first();
+        const usuario = await knex('tb_sistema_usuario AS user')
+        .join('tb_sistema_usuario_perfil as profile', 'user.id', 'profile.id_usuario')
+        .where({ email: email})
+        .select('user.id', 'user.email', 'user.senha', 'profile.perfil').first()
         if(!usuario){
             return res.status(401).json({message: 'Email ou senha inválidos!'})
         }
@@ -53,7 +57,8 @@ app.post('/api/login', async (req, res) => {
         const token = jwt.sign(
             {
                 userId: usuario.id,
-                email: usuario.email
+                email: usuario.email,
+                perfil: usuario.perfil
             },
             JWT_SECRET,
             {
@@ -72,6 +77,33 @@ app.post('/api/login', async (req, res) => {
         res.status(500).json({message: 'Erro interno no servidor!'});
     }
 });
+
+
+app.get('/api/meus-pedidos/', authMiddleware, async (req, res) => {
+    const idUsuarioLogado = req.user.userId;
+
+    console.log(`LOG: Buscando pedidos para o usuário ${idUsuarioLogado}`);
+
+    try{
+        const fornecedor = await knex('tb_fornecedor').where({id_usuario: idUsuarioLogado}).first(); // Seleciona o fornecedor baseado no idLogado
+
+        if(!fornecedor){
+            return res.status(404).json({message: 'Fornecedor não encontrado'})
+        }
+
+        // Dados de pedidos simulados para testes
+        const pedidos = [
+            { id: 2, id_loja: 10, vl_total_pedido: 100.50, status: 'PENDENTE'},
+            { id: 5, id_loja: 12, vl_total_pedido: 1114.25, status: 'PENDENTE'}
+        ];
+
+        res.json(pedidos);
+    } catch(err){
+        console.error("Erro ao buscar pedidos: ", err);
+        return res.status(500).json({message: 'Erro interno no servidor'});
+    }
+});
+
 
 app.listen(3001, () => {
   console.log(`🚀 Servidor Backend rodando na http://localhost:${3001}`);
