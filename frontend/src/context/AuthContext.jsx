@@ -5,7 +5,7 @@ const AuthContext = createContext(null); // Cria o contexto (cerebro)
 
 export const AuthProvider = ({ children }) => { // Cria o provedor
 
-    const [user, setUser] = useState(null);
+    const [authState, setAuthState] = useState({token: null, user: null}); // Cria o estado do usuário, para guardar o token e o user
 
     useEffect(() => {   // Verificador do cofre
         const tokenSalvo = localStorage.getItem('authToken'); // Busca o token no localStorage
@@ -13,7 +13,7 @@ export const AuthProvider = ({ children }) => { // Cria o provedor
         if(tokenSalvo){
             try{
                 const decodedUser = jwtDecode(tokenSalvo);
-                setUser(decodedUser);
+                setAuthState({token: tokenSalvo, user: decodedUser}); // Define o token e o user
             } catch(err){
                 localStorage.removeItem('authToken');
             }
@@ -24,7 +24,7 @@ export const AuthProvider = ({ children }) => { // Cria o provedor
         try {
             const decodedUser = jwtDecode(token);
             localStorage.setItem('authToken', token); // salvamos o token no localStorage
-            setUser(decodedUser);
+            setAuthState({token: token, user: decodedUser}); // Define o token e o user
         } catch(err){
             console.error("Erro ao decodificar token no login: ", err);
         }
@@ -33,11 +33,11 @@ export const AuthProvider = ({ children }) => { // Cria o provedor
 
     const logout = () => {
         localStorage.removeItem('authToken'); // Removemos o token do localStorage
-        setUser(null); // Limpamos o componente
+        setAuthState({token: null, user: null}); // Limpamos o componente
     }
 
     return (
-        <AuthContext.Provider value={{user, login, logout}}>
+        <AuthContext.Provider value={{authState, login, logout}}>
             {children}
         </AuthContext.Provider>
     );

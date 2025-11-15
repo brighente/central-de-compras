@@ -22,12 +22,12 @@ const renderDashboard = (user) =>{
 
 function App(){
   
-    const { user } = useContext(AuthContext); // Pega o Estado do usuário, usando o useContext (Cerebro)
+    const { authState } = useContext(AuthContext); // Pega o Estado do usuário, usando o useContext (Cerebro)
 
     // Se não tiver user (deslogado), mostra a tela de login, se tiver user (logado), mostra o dashboard
     return (
         <div className="App">
-            {!user ? <LoginPage /> : renderDashboard(user)}
+            {!authState ? <LoginPage /> : renderDashboard(authState.user)}
         </div>
     );
 }
