@@ -6,7 +6,7 @@ import { AuthProvider } from './context/AuthContext.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <AuthProvider> // Todo children que estiver dentro do AuthProvider poderá se comunicar com o login
+    <AuthProvider> {/* Todo children que estiver dentro do AuthProvider poderá se comunicar com o login */}
         <App />
     </AuthProvider>
   </StrictMode>,

@@ -40,7 +40,10 @@ app.post('/api/login', async (req, res) => {
     }
 
     try {
-        const usuario = await knex('tb_sistema_usuario').where({email: email}).first();
+        const usuario = await knex('tb_sistema_usuario AS user')
+        .join('tb_sistema_usuario_perfil as profile', 'user.id', 'profile.id_usuario')
+        .where({ email: email})
+        .select('user.id', 'user.email', 'user.senha', 'profile.perfil').first()
         if(!usuario){
             return res.status(401).json({message: 'Email ou senha inválidos!'})
         }
@@ -53,7 +56,8 @@ app.post('/api/login', async (req, res) => {
         const token = jwt.sign(
             {
                 userId: usuario.id,
-                email: usuario.email
+                email: usuario.email,
+                perfil: usuario.perfil
             },
             JWT_SECRET,
             {
