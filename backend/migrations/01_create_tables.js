@@ -9,6 +9,8 @@ async function createEnums(knex){
 exports.up = async function(knex){
     await createEnums(knex);
 
+            // ----- Tabelas do sistema ----- //
+
     await knex.schema.createTable('tb_sistema_conta', (table) => {
         table.bigIncrements('id').primary();
         table.timestamp('dh_inc').notNullable().defaultTo(knex.fn.now());
@@ -30,6 +32,8 @@ exports.up = async function(knex){
         table.bigInteger('id_usuario').references('id').inTable('tb_sistema_usuario').notNullable();
         table.specificType('perfil', 'TIPO_PERFIL').notNullable();
     });
+
+            // ----- Tabelas de Entidades ----- //
 
     await knex.schema.createTable('tb_fornecedor', (table) => {
         table.bigIncrements('id').primary();
@@ -55,7 +59,6 @@ exports.up = async function(knex){
         table.boolean('ativo').defaultTo(true);
     });
 
-
     await knex.schema.createTable('tb_loja_endereco', (table) => {
         table.bigIncrements('id').primary();
         table.bigInteger('id_loja').references('id').inTable('tb_loja').notNullable();
@@ -67,11 +70,48 @@ exports.up = async function(knex){
         table.string('cep').notNullable();
     });
 
+            // Tabelas Produtos e Pedidos //
+
+    await knex.schema.createTable('tb_categoria', (table) => {
+        table.bigIncrements('id').primary();
+        table.bigInteger('id_conta').references('id').inTable('tb_sistema_conta').notNullable();
+        table.string('nome_categoria').notNullable();
+    });
+
+    await knex.schema.createTable('tb_fornecedor_produto', (table) => {
+        table.bigIncrements('id').primary();
+        table.bigInteger('id_fornecedor').references('id').inTable('tb_fornecedor').notNullable();
+        table.bigInteger('id_categoria').references('id').inTable('tb_categoria').notNullable();
+        table.string('produto').notNullable();
+        table.decimal('valor_produto', 10, 2).notNullable();
+    });
+
+    await knex.schema.createTable('tb_pedido', (table) => {
+        table.bigIncrements('id').primary();
+        table.bigInteger('id_fornecedor').references('id').inTable('tb_fornecedor').notNullable();
+        table.bigInteger('id_loja').references('id').inTable('tb_loja').notNullable();
+        table.timestamp('dt_inc').notNullable().defaultTo(knex.fn.now());
+        table.specificType('status', 'TIPO_STATUS_PEDIDO').defaultTo('PENDENTE');
+        table.decimal('vl_total_pedido', 13, 2).notNullable();
+    })
+
+    await knex.schema.createTable('tb_pedido_item', (table) => {
+        table.bigIncrements('id').primary();
+        table.bigInteger('id_pedido').references('id').inTable('tb_pedido').notNullable();
+        table.bigInteger('id_produto').references('id').inTable('tb_fornecedor_produto').notNullable();
+        table.decimal('quantidade', 15, 3).notNullable();
+        table.decimal('valor_unitario_praticado', 10, 2).notNullable();
+    });
+
 };
 
 exports.down = async function(knex){
 
         await knex.schema
+            .dropTableIfExists('tb_pedido_item')
+            .dropTableIfExists('tb_pedido')
+            .dropTableIfExists('tb_fornecedor_produto')
+            .dropTableIfExists('tb_categoria')
             .dropTableIfExists('tb_loja_endereco')
             .dropTableIfExists('tb_loja')
             .dropTableIfExists('tb_fornecedor')

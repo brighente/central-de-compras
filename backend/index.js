@@ -91,13 +91,10 @@ app.get('/api/meus-pedidos/', authMiddleware, async (req, res) => {
             return res.status(404).json({message: 'Fornecedor não encontrado'})
         }
 
-        // Dados de pedidos simulados para testes
-        const pedidos = [
-            { id: 2, id_loja: 10, vl_total_pedido: 100.50, status: 'PENDENTE'},
-            { id: 5, id_loja: 12, vl_total_pedido: 1114.25, status: 'PENDENTE'}
-        ];
-
+        // Dados de pedidos vindos do banco
+        const pedidos = await knex('tb_pedido').where({ id_fornecedor: fornecedor.id }).select('*');
         res.json(pedidos);
+
     } catch(err){
         console.error("Erro ao buscar pedidos: ", err);
         return res.status(500).json({message: 'Erro interno no servidor'});
