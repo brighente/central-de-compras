@@ -49,11 +49,29 @@ export default function FornecedorDashboard() {
             {loading && <p>Carregando pedidos...</p>}
 
             {!loading && (
-                <ul>
+                <ul style={{ listStyle: 'none', padding: 0}}>
                     {/* o .map funciona igual js, mas troquei as {} por () pois o React entende que é um 'retorno implicito', sem precisar digitar return */}
                     {pedidos.map(pedido => (
-                        <li key={pedido.id}>
-                            Pedido #{pedido.id} - Valor: R$ {pedido.vl_total_pedido} - Status: {pedido.status}
+                        <li key={pedido.id} style={{ border: '1px solid #555', padding: '10px', marginBottom: '15px'}}>
+                            <div>
+                                <strong>Pedido #{pedido.id}</strong> (Loja: {pedido.loja_nome})
+
+                                <span style={{ float: 'right'}}>Total: R$ {pedido.vl_total_pedido}</span>
+                            </div>
+                            <div>
+                                Status: {pedido.status}
+                            </div>
+                            <hr style={{ borderColor: '#444'}}/>
+                            <strong>Itens do Pedido:</strong>
+                            <ul style={{ fontSize: '0.9em'}}>
+                                {pedido.itens.map( item => (
+                                    <li key={item.nome_produto}>
+                                        {parseFloat(item.quantidade)}x {item.nome_produto}
+                                        (Categoria: {item.categoria_produto})
+                                        - R$ {item.valor_unitario_praticado} cada
+                                    </li>
+                                ))}
+                            </ul>
                         </li>
                     ))}
                 </ul>

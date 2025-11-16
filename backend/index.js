@@ -92,8 +92,48 @@ app.get('/api/meus-pedidos/', authMiddleware, async (req, res) => {
         }
 
         // Dados de pedidos vindos do banco
-        const pedidos = await knex('tb_pedido').where({ id_fornecedor: fornecedor.id }).select('*');
-        res.json(pedidos);
+        const pedidos = await knex('tb_pedido AS ped')
+            .join('tb_loja AS loja', 'ped.id_loja', 'loja.id' )
+            .where('ped.id_fornecedor', fornecedor.id)
+            .select(
+                'ped.id',
+                'ped.dt_inc',
+                'ped.status',
+                'ped.vl_total_pedido',
+                'loja.nome_fantasia AS loja_nome'
+            )
+            .orderBy('ped.id', 'asc');
+
+        if(pedidos.length === 0){
+            return res.json([]);
+        }
+
+        const pedidoIds = pedidos.map( (p) => {
+            return p.id
+        });
+
+        // Pega os itens do pedido
+        const itens = await knex('tb_pedido_item AS pi')
+            .join('tb_fornecedor_produto AS prod', 'pi.id_produto', 'prod.id')
+            .join('tb_categoria AS cat', 'prod.id_categoria', 'cat.id')
+            .whereIn('pi.id_pedido', pedidoIds)
+            .select(
+                'pi.id_pedido',
+                'prod.produto AS nome_produto',
+                'cat.nome_categoria AS categoria_produto',
+                'pi.quantidade',
+                'pi.valor_unitario_praticado' 
+            );
+
+        // Junta os pedidos com seus itens em um array completo
+        const pedidosComItens = pedidos.map( (pedido) => {
+            return {
+                ...pedido,
+                itens: itens.filter( item => item.id_pedido === pedido.id)
+            }
+        });
+
+        res.json(pedidosComItens);
 
     } catch(err){
         console.error("Erro ao buscar pedidos: ", err);
