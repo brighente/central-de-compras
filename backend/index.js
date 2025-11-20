@@ -141,6 +141,60 @@ app.get('/api/meus-pedidos/', authMiddleware, async (req, res) => {
     }
 });
 
+app.patch('/api/pedidos/:id/status', authMiddleware, async (req, res) => {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const statusPermitidos = ['PENDENTE', 'SEPARADO', 'ENVIADO', 'CANCELADO'];
+    if(!statusPermitidos.includes(status)){
+        res.status(400).json({message: 'Status Inválido'})
+    }
+
+    try {
+        const fornecedor = await knex('tb_fornecedor').where({id_usuario: req.user.userId}).first();
+
+        if(!fornecedor){
+            return res.status(404).json({message: 'Fornecedor não encontrado'})
+        }
+
+        const pedido = await knex('tb_pedido').where({id: id, id_fornecedor: fornecedor.id}).first();
+
+        if(!pedido){
+            return res.status(404).json({message: 'Pedido não encontrado ou não pertence a você'})
+        }
+
+        await knex('tb_pedido').where({id: id}).update({status: status});
+
+        res.json({message: `Pedido #${id} atualizado para ${status} com sucesso!`});
+    } catch(err){
+        console.error("Erro ao atualizar pedido: ", err);
+        res.status(500).json({message: 'Erro interno'});
+    }
+});
+
+
+app.get('/api/vitrine', authMiddleware, async (req, res) => {
+    try{
+        // SQL para buscar os produtos e organizar eles por fornecedor
+        const produtos = await knex('tb_fornecedor_produto AS prod')  
+            .join('tb_fornecedor As forn', 'prod.id_fornecedor', 'forn.id')
+            .join('tb_categoria AS cat', 'prod.id_categoria', 'cat.id')
+            .select(
+                'prod.id',
+                'prod.produto',
+                'prod.valor_produto',
+                'forn.nome_fantasia AS fornecedor_nome',
+                'cat.nome_categoria'
+            )
+            .orderBy('forn.nome_fantasia'); 
+
+        res.json(produtos);
+    } catch(err){
+        console.error('Erro ao buscar vitrine: ', err);
+        res.status(500).json({message: 'Erro ao carregar produtos'});
+    }
+});
+
 
 app.listen(3001, () => {
   console.log(`🚀 Servidor Backend rodando na http://localhost:${3001}`);
