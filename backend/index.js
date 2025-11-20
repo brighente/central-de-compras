@@ -195,6 +195,87 @@ app.get('/api/vitrine', authMiddleware, async (req, res) => {
     }
 });
 
+app.post('/api/pedidos', authMiddleware, async (req, res) => {
+    const {itens} = req.body;
+    const idUsuarioLogado = req.user.userId;
+
+    if(!itens || itens.length === 0) {
+        return res.status(400).json({message: 'O pedido não pode estar vazio!'});
+    }
+
+    const transaction = await knex.transaction();
+
+    try {
+        const loja = await transaction('tb_loja').where({ id_usuario: idUsuarioLogado }).first();
+
+        if(!loja){
+            throw new Error('Usuario logado não é uma loja válida.')
+        }
+
+        const itensPorFornecedor = {};
+
+        for(const item of itens){
+            const produtoInfo = await transaction('tb_fornecedor_produto').where({id: item.id_produto}).first();
+
+            if(!produtoInfo){
+                throw new Error(`Produto de ID: ${item.id_produto} não encontrado!`)
+            }
+
+            const idFornecedor = produtoInfo.id_fornecedor;
+
+            if(!itensPorFornecedor[idFornecedor]){
+                itensPorFornecedor[idFornecedor] = [];
+            }
+
+            itensPorFornecedor[idFornecedor].push({
+                id_produto: item.id_produto,
+                quantidade: item.quantidade,
+                valor_unitario: produtoInfo.valor_produto,
+                produto_nome: produtoInfo.produto
+            });
+        }
+
+        const idsPedidosCriados = [];
+
+        for(const idForn of Object.keys(itensPorFornecedor)){
+            const listaItens = itensPorFornecedor[idForn];
+
+            const valorTotalPedido = listaItens.reduce((acumulador, item) => {
+                return acumulador + (item.quantidade * item.valor_unitario);
+            }, 0);
+
+            const [pedidoCriado] = await transaction('tb_pedido').insert({
+                id_fornecedor: idForn,
+                id_loja: loja.id,
+                dt_inc: new Date(),
+                status: 'PENDENTE',
+                vl_total_pedido: valorTotalPedido
+            }).returning('id');
+
+            idsPedidosCriados.push(pedidoCriado.id);
+
+            const itensParaInserir = listaItens.map((item) => {
+                return {
+                    id_pedido: pedidoCriado.id,
+                    id_produto: item.id_produto,
+                    quantidade: item.quantidade,
+                    valor_unitario_praticado: item.valor_unitario
+                }
+            });
+
+            await transaction('tb_pedido_item').insert(itensParaInserir);
+        }
+
+        await transaction.commit(); // Confirma a transação 
+        console.log(`LOG: Pedidos criados :${idsPedidosCriados.join(', ')}`);
+        res.json({message: 'Pedido realizado!', pedidosIds: idsPedidosCriados})
+    } catch(err){
+        await transaction.rollback(); // Cancela todas as transaçõe caso de erro em alguma no meio
+        console.error("Erro ao processar o pedido ", err);
+        res.status(500).json({message: 'Erro ao processar o pedido: ' + err.message})
+    }
+})
+
 
 app.listen(3001, () => {
   console.log(`🚀 Servidor Backend rodando na http://localhost:${3001}`);
