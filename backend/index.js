@@ -1,17 +1,19 @@
 const express = require('express');
 const cors = require('cors'); // O "porteiro" que deixa o React chamar a API
-const knexConfig = require('./knexfile').development; // Pega a config do banco
-const knex = require('knex')(knexConfig); // Inicializa o Knex
 const bcrypt = require('bcryptjs') // Inicializa o bcrypt
 const jwt = require('jsonwebtoken') // Inicializa o JsonWebToken
 const authMiddleware = require('./authMiddleware'); // Importa o authMiddleware
+const db = require('./db'); // Importa o banco
+const produtosRoutes = require('./routes/produtosRoutes'); // Importa a rota de produtos
 
 const JWT_SECRET = 'projeto-central-compras-abacate'
 
 const app = express();
-
 app.use(cors()); // Diz ao Express para usar o "porteiro" CORS
 app.use(express.json()); // Diz ao Express para entender JSON
+
+
+app.use('/api/produtos', produtosRoutes);
 
 // Get fornecedores
 // Quando acessado essa rota, o SQL do knex será executado, retornando os fornecedores
@@ -19,7 +21,7 @@ app.get('/api/fornecedores', async (req, res) => {
   console.log("LOG: Recebi uma requisição para /api/fornecedores");
   
   try {
-    const fornecedores = await knex('tb_fornecedor').select('id', 'nome_fantasia'); // SELECT id, nome_fantasia FROM tb_fornecedor
+    const fornecedores = await db('tb_fornecedor').select('id', 'nome_fantasia'); // SELECT id, nome_fantasia FROM tb_fornecedor
     res.json(fornecedores); // Transformando a resposta do SQL em JSON
 
   } catch (err) {
@@ -41,7 +43,7 @@ app.post('/api/login', async (req, res) => {
     }
 
     try {
-        const usuario = await knex('tb_sistema_usuario AS user')
+        const usuario = await db('tb_sistema_usuario AS user')
         .join('tb_sistema_usuario_perfil as profile', 'user.id', 'profile.id_usuario')
         .where({ email: email})
         .select('user.id', 'user.email', 'user.senha', 'profile.perfil').first()
@@ -85,14 +87,14 @@ app.get('/api/meus-pedidos/', authMiddleware, async (req, res) => {
     console.log(`LOG: Buscando pedidos para o usuário ${idUsuarioLogado}`);
 
     try{
-        const fornecedor = await knex('tb_fornecedor').where({id_usuario: idUsuarioLogado}).first(); // Seleciona o fornecedor baseado no idLogado
+        const fornecedor = await db('tb_fornecedor').where({id_usuario: idUsuarioLogado}).first(); // Seleciona o fornecedor baseado no idLogado
 
         if(!fornecedor){
             return res.status(404).json({message: 'Fornecedor não encontrado'})
         }
 
         // Dados de pedidos vindos do banco
-        const pedidos = await knex('tb_pedido AS ped')
+        const pedidos = await db('tb_pedido AS ped')
             .join('tb_loja AS loja', 'ped.id_loja', 'loja.id' )
             .where('ped.id_fornecedor', fornecedor.id)
             .select(
@@ -113,7 +115,7 @@ app.get('/api/meus-pedidos/', authMiddleware, async (req, res) => {
         });
 
         // Pega os itens do pedido
-        const itens = await knex('tb_pedido_item AS pi')
+        const itens = await db('tb_pedido_item AS pi')
             .join('tb_fornecedor_produto AS prod', 'pi.id_produto', 'prod.id')
             .join('tb_categoria AS cat', 'prod.id_categoria', 'cat.id')
             .whereIn('pi.id_pedido', pedidoIds)
@@ -151,19 +153,19 @@ app.patch('/api/pedidos/:id/status', authMiddleware, async (req, res) => {
     }
 
     try {
-        const fornecedor = await knex('tb_fornecedor').where({id_usuario: req.user.userId}).first();
+        const fornecedor = await db('tb_fornecedor').where({id_usuario: req.user.userId}).first();
 
         if(!fornecedor){
             return res.status(404).json({message: 'Fornecedor não encontrado'})
         }
 
-        const pedido = await knex('tb_pedido').where({id: id, id_fornecedor: fornecedor.id}).first();
+        const pedido = await db('tb_pedido').where({id: id, id_fornecedor: fornecedor.id}).first();
 
         if(!pedido){
             return res.status(404).json({message: 'Pedido não encontrado ou não pertence a você'})
         }
 
-        await knex('tb_pedido').where({id: id}).update({status: status});
+        await db('tb_pedido').where({id: id}).update({status: status});
 
         res.json({message: `Pedido #${id} atualizado para ${status} com sucesso!`});
     } catch(err){
@@ -176,7 +178,7 @@ app.patch('/api/pedidos/:id/status', authMiddleware, async (req, res) => {
 app.get('/api/vitrine', authMiddleware, async (req, res) => {
     try{
         // SQL para buscar os produtos e organizar eles por fornecedor
-        const produtos = await knex('tb_fornecedor_produto AS prod')  
+        const produtos = await db('tb_fornecedor_produto AS prod')  
             .join('tb_fornecedor As forn', 'prod.id_fornecedor', 'forn.id')
             .join('tb_categoria AS cat', 'prod.id_categoria', 'cat.id')
             .select(
@@ -203,7 +205,7 @@ app.post('/api/pedidos', authMiddleware, async (req, res) => {
         return res.status(400).json({message: 'O pedido não pode estar vazio!'});
     }
 
-    const transaction = await knex.transaction();
+    const transaction = await db.transaction();
 
     try {
         const loja = await transaction('tb_loja').where({ id_usuario: idUsuarioLogado }).first();
@@ -241,7 +243,7 @@ app.post('/api/pedidos', authMiddleware, async (req, res) => {
             const listaItens = itensPorFornecedor[idForn];
 
             const valorTotalPedido = listaItens.reduce((acumulador, item) => {
-                return acumulador + (item.quantidade * item.valor_unitario);
+                return acumulador + (item.quantidade * item.valor_unitario);  // Calcula o valor total com base no valor da tabela (segurança)
             }, 0);
 
             const [pedidoCriado] = await transaction('tb_pedido').insert({
