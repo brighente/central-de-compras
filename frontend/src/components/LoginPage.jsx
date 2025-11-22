@@ -15,7 +15,7 @@ function LoginPage() {
         setLoading(true);
 
         try{
-            const response = await fetch('http://localhost:3001/api/login', {  // Enviamos um json de login para a rota de login no backend
+            const response = await fetch('http://localhost:3001/api/auth/login', {  // Enviamos um json de login para a rota de login no backend
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

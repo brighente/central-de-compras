@@ -14,7 +14,7 @@ export default function FornecedorDashboard() {
     const fetchPedidos = async () => {  // Função para buscar os pedidos
         setLoading(true)
         try{
-            const response = await fetch('http://localhost:3001/api/meus-pedidos', {
+            const response = await fetch('http://localhost:3001/api/pedidos/fornecedor', {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${authState.token}` // Passa o token('passaporte')
