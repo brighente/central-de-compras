@@ -24,11 +24,21 @@ router.get('/', async (req, res) => {
     }
 });
 
+router.get('/categorias', async (req, res) => {
+    try{
+        const categorias = await db('tb_categoria').select('*');
+        res.json(categorias);
+    } catch(err){
+        console.error(err);
+        res.status(500).json({message: 'Erro ao buscar categorias.'});
+    }
+});
+
 router.post('/', async (req, res) => {
     const { produto, valor_produto, id_categoria } = req.body;  // Pega do frontend
 
     try{
-        const fornecedor = (await db('tb_fornecedor').where({ id_usuario: req.user.userId })).first();
+        const fornecedor = await db('tb_fornecedor').where({ id_usuario: req.user.userId }).first();
 
         const [novoId] = await db('tb_fornecedor_produto').insert({
             id_fornecedor: fornecedor.id,

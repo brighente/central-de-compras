@@ -1,44 +1,46 @@
 import React, { useContext, useState, useEffect } from 'react';
 import AuthContext from '../context/AuthContext';
+import GerenciarProdutos from './GerenciadorProdutos';
 
 export default function FornecedorDashboard() {
     const { logout, authState } = useContext(AuthContext); // Pega a função logout e o estado de auth
 
+    const [view, setView] = useState('pedidos');
+
     const [pedidos, setPedidos] = useState([]); // Estado para guardar os pedidos
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
 
     const fetchPedidos = async () => {  // Função para buscar os pedidos
-            try{
-                const response = await fetch('http://localhost:3001/api/meus-pedidos', {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${authState.token}` // Passa o token('passaporte')
-                    }
-                });
-
-                if(!response.ok){
-                    throw new Error('Falha ao buscar pedidos. Você será deslogado!');
+        setLoading(true)
+        try{
+            const response = await fetch('http://localhost:3001/api/meus-pedidos', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authState.token}` // Passa o token('passaporte')
                 }
+            });
 
-                const data = await response.json();
-                setPedidos(data); // Salva os pedidos no estado
-            } catch(err){
-                console.error(err);
-                logout(); // Desloga o usuário, já que o token ou expirou, ou é inválido
-            } finally {
-                setLoading(false);
+            if(!response.ok){
+                throw new Error('Falha ao buscar pedidos. Você será deslogado!');
             }
-        };
+
+            const data = await response.json();
+            setPedidos(data); // Salva os pedidos no estado
+        } catch(err){
+            console.error(err);
+            logout(); // Desloga o usuário, já que o token ou expirou, ou é inválido
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        if(!authState.token){ // Verifica se existe token, caso não, nem tenta nada
-            return;
+        if(view === 'pedidos' && authState.token){ // Verifica se existe token, caso não, nem tenta nada
+            fetchPedidos();
         }
-    
-        fetchPedidos();
-    }, [authState.token, logout]); // Lista de gatilhos do 'useEffect()', para rodar novamente caso algum desses valores/funções se alterem
+    }, [view, authState.token, logout]); // Lista de gatilhos do 'useEffect()', para rodar novamente caso algum desses valores/funções se alterem
 
-    const handleStatusChange = async (pedidoId, novoStatus) => {
+    const handleTrocaStatus = async (pedidoId, novoStatus) => {
         if(!confirm(`Deseja mudar o status para ${novoStatus}?`)){
             return;
         }
@@ -66,81 +68,54 @@ export default function FornecedorDashboard() {
         }
 
     return (
-        <div style={{ padding: '20px', fontFamily: 'Arial' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-            <h1>Painel do FORNECEDOR</h1>
-            <p>Logado como: {authState.user?.email}</p>
-            </div>
-            <button onClick={logout} style={{ padding: '10px', cursor: 'pointer' }}>Sair</button>
-        </div>
-
-        <hr />
-        <h2>Pedidos Recebidos</h2>
-        
-        {loading && <p>Carregando...</p>}
-
-        {!loading && (
-            <ul style={{ listStyle: 'none', padding: 0 }}>
-            {pedidos.map(pedido => (
-                <li key={pedido.id} style={{ border: '1px solid #ccc', borderRadius: '8px', padding: '15px', marginBottom: '20px', boxShadow: '2px 2px 5px rgba(0,0,0,0.1)' }}>
+        <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: 'var(--cor-fundo)', fontFamily: 'sans-serif' }}>
+            
+            {/* --- Barra Lateral --- */}
+            <div style={{ width: '250px', backgroundColor: 'var(--cor-sidebar)', color: 'white', padding: '20px', display: 'flex', flexDirection: 'column' }}>
+                <h2 style={{ fontSize: '1.2rem', marginBottom: '40px' }}>ÁREA FORNECEDOR</h2>
+                <div onClick={() => setView('pedidos')} style={{ padding: '10px', cursor: 'pointer', backgroundColor: view === 'pedidos' ? 'rgba(255,255,255,0.1)' : 'transparent', marginBottom: '5px', borderRadius: '4px' }}> 📦 Pedidos Recebidos </div>
                 
-                {/* Cabeçalho do Card */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                    <span style={{ fontSize: '1.2em', fontWeight: 'bold' }}>Pedido #{pedido.id}</span>
-                    <span>Loja: <strong>{pedido.loja_nome}</strong></span>
-                </div>
+                <div onClick={() => setView('produtos')} style={{ padding: '10px', cursor: 'pointer', backgroundColor: view === 'produtos' ? 'rgba(255,255,255,0.1)' : 'transparent', marginBottom: '5px', borderRadius: '4px' }}> 🏷️ Meus Produtos </div>
 
-                <div style={{ marginBottom: '10px' }}>
-                    Status: <span style={{ fontWeight: 'bold', color: getStatusColor(pedido.status) }}>{pedido.status}</span>
-                    <span style={{ float: 'right', fontWeight: 'bold' }}>Total: R$ {pedido.vl_total_pedido}</span>
+                <div style={{ marginTop: 'auto' }}>
+                    <p style={{ fontSize: '0.8rem', opacity: 0.7 }}>{authState.user?.email}</p>
+                    <button onClick={logout} style={{ background: 'transparent', border: '1px solid white', color: 'white', padding: '5px 15px', width: '100%', borderRadius: '4px' }}>Sair</button>
                 </div>
+            </div>
 
-                {/* Lista de Itens */}
-                <div style={{ background: '#443b2bff', padding: '10px', borderRadius: '5px' }}>
-                    <strong>Itens:</strong>
-                    <ul style={{ paddingLeft: '20px', margin: '5px 0' }}>
-                    {pedido.itens.map(item => (
-                        <li key={item.nome_produto}>
-                        {parseFloat(item.quantidade)}x {item.nome_produto} 
-                        <span style={{ color: '#666', fontSize: '0.9em' }}> ({item.categoria_produto})</span>
-                        </li>
+            <div style={{ flex: 1, padding: '30px', overflowY: 'auto' }}>
+            
+            {/* Tela dos Pedidos */}
+            {view === 'pedidos' && (
+                <div>
+                    <h2 style={{ color: 'var(--cor-sidebar)' }}>Pedidos Recebidos</h2>
+                    <hr style={{ border: '1px solid #ddd', marginBottom: '20px' }} />
+                    {loading && <p>Carregando...</p>}
+                    {!loading && pedidos.map(pedido => (
+                        <div key={pedido.id} style={{ backgroundColor: 'white', border: '1px solid #ddd', borderRadius: '8px', padding: '20px', marginBottom: '20px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                                <strong>Pedido #{pedido.id} - {pedido.loja_nome}</strong>
+                                <span>R$ {pedido.vl_total_pedido}</span>
+                            </div>
+                            <div>Status: <strong>{pedido.status}</strong></div>
+                            
+                            {/* Botões */}
+                            <div style={{ marginTop: '10px' }}>
+                                {pedido.status === 'PENDENTE' && <button onClick={() => handleTrocaStatus(pedido.id, 'SEPARADO')} style={{ marginRight: '10px' }}>Separar</button>}
+                                {pedido.status === 'SEPARADO' && <button onClick={() => handleTrocaStatus(pedido.id, 'ENVIADO')}>Enviar</button>}
+                            </div>
+                        </div>
                     ))}
-                    </ul>
                 </div>
+            )}
 
-                {/* --- BOTOES DE AÇÃO (Lógica de Status) --- */}
-                <div style={{ marginTop: '15px', textAlign: 'right' }}>
-                    {pedido.status === 'PENDENTE' && (
-                    <button 
-                        onClick={() => handleStatusChange(pedido.id, 'SEPARADO')}
-                        style={{ background: '#FFA500', color: 'white', border: 'none', padding: '8px 15px', cursor: 'pointer', borderRadius: '4px' }}
-                    >
-                        Marcar como SEPARADO
-                    </button>
-                    )}
-                    
-                    {pedido.status === 'SEPARADO' && (
-                    <button 
-                        onClick={() => handleStatusChange(pedido.id, 'ENVIADO')}
-                        style={{ background: '#28a745', color: 'white', border: 'none', padding: '8px 15px', cursor: 'pointer', borderRadius: '4px' }}
-                    >
-                        Marcar como ENVIADO
-                    </button>
-                    )}
+            {/* Tela dos Produtos */}
+            {view === 'produtos' && <GerenciarProdutos />}
 
-                    {pedido.status === 'ENVIADO' && (
-                    <span style={{ color: 'green' }}>✔ Pedido Finalizado</span>
-                    )}
-                </div>
-
-                </li>
-            ))}
-            </ul>
-        )}
+            </div>
         </div>
-    );
-    }
+        );
+}
 
     // Funçãozinha auxiliar para deixar bonitinho
     function getStatusColor(status) {
