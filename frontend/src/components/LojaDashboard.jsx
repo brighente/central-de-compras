@@ -1,9 +1,10 @@
 import React, { useContext, useEffect, useState } from 'react';
 import AuthContext from '../context/AuthContext';
 import CartContext from '../context/CartContext';
+import Sidebar from './Sidebar';
 
 export default function LojaDashboard() {
-    const { logout, authState } = useContext(AuthContext); // Pega a função logout e o estado de auth
+    const { authState } = useContext(AuthContext); // Pega o estado de auth
     const { cartItens, addToCart, removerDoCart, limparCart, cartTotal } = useContext(CartContext);
 
     const [produtos, setProdutos] = useState([])
@@ -83,8 +84,7 @@ return (
     <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: 'var(--cor-fundo)' }}>
       
         {/* Sidebar com o carrinho de compra */}
-        <div style={{ width: '300px', backgroundColor: 'var(--cor-sidebar)', color: 'white', padding: '20px', display: 'flex', flexDirection: 'column' }}>
-            <h2 style={{ fontSize: '1.2rem', marginBottom: '20px' }}>CENTRAL COMPRAS</h2>
+        <Sidebar title="CENTRAL DA LOJA">
             
             {/* Resumo do Carrinho */}
             <div style={{ backgroundColor: 'rgba(255,255,255,0.1)', padding: '15px', borderRadius: '8px', marginBottom: '20px', flex: 1 }}>
@@ -119,11 +119,7 @@ return (
                 )}
             </div>
             
-            <div>
-                <p style={{ fontSize: '0.8rem', opacity: 0.7 }}>{authState.user?.email}</p>
-                <button onClick={logout} style={{ background: 'transparent', border: '1px solid white', color: 'white', padding: '5px 15px', width: '100%', borderRadius: '4px' }}>Sair</button>
-            </div>
-        </div>
+        </Sidebar>
 
         {/* Vitrine de Produtos */}
         <div style={{ flex: 1, padding: '30px', overflowY: 'auto' }}>
