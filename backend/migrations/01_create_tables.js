@@ -103,11 +103,22 @@ exports.up = async function(knex){
         table.decimal('valor_unitario_praticado', 10, 2).notNullable();
     });
 
+    await knex.schema.createTable('tb_fornecedor_condicao_estado', (table) => {
+        table.bigIncrements('id').primary();
+        table.bigInteger('id_fornecedor').references('id').inTable('tb_fornecedor').notNullable();
+        table.string('estado', 2).notNullable(); // Sigla dos estados
+        table.decimal('valor_cashback_percentual', 5, 2).defaultTo(0);
+        table.integer('prazo_pagamento_dias').defaultTo(0);
+        table.decimal('acrescimo_desconto_unitario_valor', 10, 2).defaultTo(0); // Em caso de desconto o valor é negativo
+        table.unique(['id_fornecedor', 'estado']); // Evita que regras sejam duplicadas
+    });
+
 };
 
 exports.down = async function(knex){
 
         await knex.schema
+            .dropTableIfExists('tb_fornecedor_condicao_estado')
             .dropTableIfExists('tb_pedido_item')
             .dropTableIfExists('tb_pedido')
             .dropTableIfExists('tb_fornecedor_produto')

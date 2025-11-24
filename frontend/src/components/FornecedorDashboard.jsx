@@ -1,6 +1,7 @@
 import React, { useContext, useState, useEffect } from 'react';
 import AuthContext from '../context/AuthContext';
 import GerenciarProdutos from './GerenciadorProdutos';
+import GerenciarCondicoes from './GerenciarCondicoes';
 import Sidebar from './Sidebar';
 
 export default function FornecedorDashboard() {
@@ -80,6 +81,10 @@ export default function FornecedorDashboard() {
                 <div onClick={() => setView('produtos')} style={{ padding: '12px', cursor: 'pointer', backgroundColor: view === 'produtos' ? 'rgba(255,255,255,0.15)' : 'transparent', marginBottom: '8px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                     🏷️ Meus Produtos
                 </div>
+
+                <div onClick={() => setView('condicoes')} style={{ padding: '12px', cursor: 'pointer', backgroundColor: view === 'produtos' ? 'rgba(255,255,255,0.15)' : 'transparent', marginBottom: '8px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    📍 Condições por Estado
+                </div>
             </Sidebar>
 
             <div style={{ flex: 1, padding: '30px', overflowY: 'auto' }}>
@@ -148,6 +153,8 @@ export default function FornecedorDashboard() {
 
             {/* Tela dos Produtos */}
             {view === 'produtos' && <GerenciarProdutos />}
+
+            {view === 'condicoes' && <GerenciarCondicoes />}
 
             </div>
         </div>
