@@ -65,6 +65,28 @@ export default function GerenciarCondicoes() {
         }
     }
 
+    const handleDeletar = async(id) => {
+        if(!confirm('Tem certeza que deseja excluir essa condição?')){
+            return
+        }
+
+        try{
+            const res = await fetch(`http://localhost:3001/api/condicoes/${id}`,{
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${authState.token}`}
+            });
+
+            if(res.ok){
+                fetchRegras();
+            } else {
+                const data = await res.json();
+                alert(data.message || 'Erro ao deletar');
+            }
+        } catch(err){
+            console.error(err)
+        }
+    }
+
     return (
     <div>
         <h2 style={{ color: 'var(--cor-sidebar)', marginBottom: '20px' }}>Condições por Estado (UF)</h2>
@@ -124,7 +146,7 @@ export default function GerenciarCondicoes() {
                         </div>
                     </div>
 
-                    <button onClick={() => handleDelete(regra.id)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.2rem' }}> 🗑️ </button>
+                    <button onClick={() => handleDeletar(regra.id)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.2rem' }}> 🗑️ </button>
                 </div>
             ))}
         </div>

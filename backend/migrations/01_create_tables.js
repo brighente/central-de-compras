@@ -113,11 +113,23 @@ exports.up = async function(knex){
         table.unique(['id_fornecedor', 'estado']); // Evita que regras sejam duplicadas
     });
 
+    await knex.schema.createTable('tb_loja_cashback', (table) => {
+        table.bigIncrements('id').primary();
+        table.bigInteger('id_loja').references('id').inTable('tb_loja').notNullable();
+        table.bigInteger('id_fornecedor').references('id').inTable('tb_fornecedor').notNullable();
+        table.bigInteger('id_pedido').references('id').inTable('tb_pedido');
+        table.decimal('vl_previsto', 13, 2).notNullable();
+        table.decimal('vl_realizado', 13, 2).notNullable();
+        table.boolean('pago').defaultTo(false);
+        table.timestamp('dt_inc').notNullable().defaultTo(knex.fn.now());
+    })
+
 };
 
 exports.down = async function(knex){
 
         await knex.schema
+            .dropTableIfExists('tb_loja_cashback')
             .dropTableIfExists('tb_fornecedor_condicao_estado')
             .dropTableIfExists('tb_pedido_item')
             .dropTableIfExists('tb_pedido')

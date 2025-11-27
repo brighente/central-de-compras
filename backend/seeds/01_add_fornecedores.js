@@ -108,4 +108,11 @@ exports.seed = async function(knex){
             valor_unitario_praticado: 7.00
         }
     ]);
+
+    await knex('tb_loja_endereco').insert([{
+        id_loja: idLoja,
+        logradouro: 'Rua Marechal Abacate',
+        estado: 'SC',
+        cep: '88750-000'
+    }]);
 }

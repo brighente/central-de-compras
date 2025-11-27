@@ -214,35 +214,41 @@ return (
                                         </div>
                                     </div>
                                     
-                                    <div style={{ marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                        <span style={{fontSize: '0.9rem', color: '#555'}}>Status:</span>
-                                        
-                                        {/* SEU BADGE AQUI */}
-                                        <span style={{ 
-                                            backgroundColor: estilo.bg, 
-                                            color: estilo.color, 
-                                            border: `1px solid ${estilo.border}`,
-                                            padding: '4px 12px', 
-                                            borderRadius: '20px', 
-                                            fontSize: '0.8rem', 
-                                            fontWeight: 'bold', 
-                                            textTransform: 'uppercase' 
-                                        }}>
-                                            {pedido.status}
-                                        </span>
+                                    {/* --- LINHA DE STATUS E CASHBACK (NOVO) --- */}
+                                    <div style={{ marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
+                                        <div style={{display: 'flex', alignItems: 'center', gap: '5px'}}>
+                                            <span style={{fontSize: '0.9rem', color: '#555'}}>Status:</span>
+                                            <BadgeStatus status={pedido.status} />
+                                        </div>
+
+                                        {/* Mostra badge de Cashback se houver valor > 0 */}
+                                        {parseFloat(pedido.cashback_ganho || 0) > 0 && (
+                                            <div style={{ 
+                                                backgroundColor: '#e8f5e9', 
+                                                color: '#2e7d32', 
+                                                padding: '4px 10px', 
+                                                borderRadius: '20px', 
+                                                fontSize: '0.8rem', 
+                                                fontWeight: 'bold',
+                                                border: '1px solid #c8e6c9',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '5px'
+                                            }}>
+                                                💰 Cashback: R$ {parseFloat(pedido.cashback_ganho).toFixed(2)}
+                                            </div>
+                                        )}
                                     </div>
 
+                                    {/* Lista de Itens */}
                                     <div style={{ backgroundColor: '#f9f9f9', padding: '15px', borderRadius: '8px' }}>
-                                        <strong style={{ fontSize: '0.85rem', textTransform: 'uppercase', color: '#999', display: 'block', marginBottom: '10px' }}>Itens do Pedido</strong>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                                            <strong style={{ fontSize: '0.85rem', textTransform: 'uppercase', color: '#999' }}>Itens do Pedido</strong>
+                                            <span style={{ fontSize: '0.7rem', color: '#999', fontStyle: 'italic' }}>*Valores podem incluir impostos/taxas regionais (UF)</span>
+                                        </div>
+                                        
                                         <ul style={{ margin: 0, paddingLeft: '20px', color: '#444' }}>
-                                            {pedido.itens.map(item => (
-                                                <li key={item.nome_produto} style={{ marginBottom: '5px', fontSize: '0.95rem' }}>
-                                                    <strong>{parseFloat(item.quantidade)}x</strong> {item.nome_produto} 
-                                                    <span style={{ color: '#888', fontSize: '0.85rem', marginLeft: '5px' }}>
-                                                        (R$ {item.valor_unitario_praticado} un.)
-                                                    </span>
-                                                </li>
-                                            ))}
+                                            {/* ... (loop dos itens igual) ... */}
                                         </ul>
                                     </div>
                                 </div>

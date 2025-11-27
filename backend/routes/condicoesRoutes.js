@@ -54,9 +54,9 @@ router.post('/', async (req, res) =>{
 });
 
 router.delete('/:id', async (req, res) => {
-    const { id } = req.params
+    const { id } = req.params;
     try{
-        const fornecedor = await db('tb_fornecedor').where({id_usuario: res.user.userId}).first();
+        const fornecedor = await db('tb_fornecedor').where({id_usuario: req.user.userId}).first();
 
         await db('tb_fornecedor_condicao_estado').where({ id, id_fornecedor: fornecedor.id }).del();
 
