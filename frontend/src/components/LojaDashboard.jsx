@@ -27,7 +27,7 @@ export default function LojaDashboard() {
                 });
 
                 if(!response.ok){
-                    throw new Error('Erro ao carregar vitrine.')
+                    throw new Error('Erro ao carregar vitrine.');
                 }
 
                 const data = await response.json();
@@ -90,11 +90,26 @@ export default function LojaDashboard() {
                     'Authorization': `Bearer ${authState.token}`
                 }
             });
+
+            if(!response.ok){
+                console.warn("API retornou erro:", response.status);
+                setMeusPedidos([]);
+                return;
+            }
             
             const data = await response.json();
-            setMeusPedidos(data);
+
+            if (Array.isArray(data)) {
+                setMeusPedidos(data);
+            } else {
+                console.warn('Formato de dados inválido recebido:', data);
+                setMeusPedidos([]);
+            }
+
+            
         } catch(err){
             console.error(err);
+            setMeusPedidos([]);
         } finally {
             setLoading(false);
         }
@@ -218,7 +233,15 @@ return (
                                     <div style={{ marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
                                         <div style={{display: 'flex', alignItems: 'center', gap: '5px'}}>
                                             <span style={{fontSize: '0.9rem', color: '#555'}}>Status:</span>
-                                            <BadgeStatus status={pedido.status} />
+                                            <span style={{
+                                                backgroundColor: estilo.bg,       
+                                                color: estilo.color,              
+                                                border: `1px solid ${estilo.border}`, 
+                                                padding: '4px 10px',              
+                                                borderRadius: '20px',             
+                                                fontSize: '0.8rem',
+                                                fontWeight: 'bold'
+                                            }}> {pedido.status} </span>
                                         </div>
 
                                         {/* Mostra badge de Cashback se houver valor > 0 */}
@@ -247,8 +270,27 @@ return (
                                             <span style={{ fontSize: '0.7rem', color: '#999', fontStyle: 'italic' }}>*Valores podem incluir impostos/taxas regionais (UF)</span>
                                         </div>
                                         
-                                        <ul style={{ margin: 0, paddingLeft: '20px', color: '#444' }}>
-                                            {/* ... (loop dos itens igual) ... */}
+                                        <ul style={{ margin: 0, paddingLeft: '0', listStyle: 'none', color: '#444' }}>
+                                            {pedido.itens && pedido.itens.map((item, index) => (
+                                                <li key={index} style={{ 
+                                                    marginBottom: '8px', 
+                                                    fontSize: '0.9rem', 
+                                                    display: 'flex', 
+                                                    justifyContent: 'space-between',
+                                                    borderBottom: '1px dashed #eee',
+                                                    paddingBottom: '5px'
+                                                }}>
+                                                    <span>
+                                                        <strong style={{ color: 'var(--cor-primary)', marginRight: '8px' }}>
+                                                            {parseFloat(item.quantidade).toFixed(2)}x
+                                                        </strong>
+                                                        {item.nome_produto}
+                                                    </span>
+                                                    <span style={{ fontWeight: '600' }}>
+                                                        R$ {parseFloat(item.valor_unitario_praticado * item.quantidade).toFixed(2)}
+                                                    </span>
+                                                </li>
+                                            ))}
                                         </ul>
                                     </div>
                                 </div>

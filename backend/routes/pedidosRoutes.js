@@ -6,11 +6,11 @@ const authMiddleware = require('../authMiddleware');
 router.use(authMiddleware);
 
 router.post('/', async (req, res) => {
-    const {itens} = req.body;
+    const { itens } = req.body;
     const idUsuarioLogado = req.user.userId;
 
-    if(!itens || itens.length === 0) {
-        return res.status(400).json({message: 'O pedido não pode estar vazio!'});
+    if (!itens || itens.length === 0) {
+        return res.status(400).json({ message: 'O pedido não pode estar vazio!' });
     }
 
     const transaction = await db.transaction();
@@ -18,27 +18,25 @@ router.post('/', async (req, res) => {
     try {
         const loja = await transaction('tb_loja')
             .join('tb_loja_endereco', 'tb_loja.id', 'tb_loja_endereco.id_loja')
-            .where({'tb_loja.id_usuario': idUsuarioLogado})
+            .where({ 'tb_loja.id_usuario': idUsuarioLogado })
             .select('tb_loja.id', 'tb_loja.id_conta', 'tb_loja_endereco.estado').first();
 
-        
-
-        if(!loja){
+        if (!loja) {
             throw new Error('Usuario logado não é uma loja válida.')
         }
 
         const itensPorFornecedor = {};
 
-        for(const item of itens){
-            const produtoInfo = await transaction('tb_fornecedor_produto').where({id: item.id_produto}).first();
+        for (const item of itens) {
+            const produtoInfo = await transaction('tb_fornecedor_produto').where({ id: item.id_produto }).first();
 
-            if(!produtoInfo){
+            if (!produtoInfo) {
                 throw new Error(`Produto de ID: ${item.id_produto} não encontrado!`)
             }
 
             const idFornecedor = produtoInfo.id_fornecedor;
 
-            if(!itensPorFornecedor[idFornecedor]){
+            if (!itensPorFornecedor[idFornecedor]) {
                 itensPorFornecedor[idFornecedor] = [];
             }
 
@@ -52,22 +50,23 @@ router.post('/', async (req, res) => {
 
         const idsPedidosCriados = [];
 
-        for(const idForn of Object.keys(itensPorFornecedor)){
+        for (const idForn of Object.keys(itensPorFornecedor)) {
             const listaItens = itensPorFornecedor[idForn];
 
-            const regra = await transaction('tb_fornecedor_condicao_estado').where({id_fornecedor: idForn, estado: loja.estado}).first();
+            const regra = await transaction('tb_fornecedor_condicao_estado')
+                .where({ id_fornecedor: idForn, estado: loja.estado }).first();
 
             let ajustePreco = 0;
             let percentualCashback = 0;
 
-            if(regra){
+            if (regra) {
                 ajustePreco = parseFloat(regra.acrescimo_desconto_unitario_valor || 0);
                 percentualCashback = parseFloat(regra.valor_cashback_percentual || 0);
             }
 
             const valorTotalPedido = listaItens.reduce((acumulador, item) => {
                 const precoFinal = parseFloat(item.valor_unitario) + ajustePreco;
-                return acumulador + (item.quantidade * precoFinal);  // Calcula o valor total com base no valor ajustado
+                return acumulador + (item.quantidade * precoFinal);
             }, 0);
 
             const [pedidoCriado] = await transaction('tb_pedido').insert({
@@ -78,13 +77,15 @@ router.post('/', async (req, res) => {
                 vl_total_pedido: valorTotalPedido
             }).returning('id');
 
-            idsPedidosCriados.push(pedidoCriado.id);
+            const idPedidoGerado = pedidoCriado.id || pedidoCriado;
+
+            idsPedidosCriados.push(idPedidoGerado);
 
             const itensParaInserir = listaItens.map((item) => {
-                const precoFinalItem = item.valor_unitario + ajustePreco;
-                
+                const precoFinalItem = parseFloat(item.valor_unitario) + ajustePreco;
+
                 return {
-                    id_pedido: pedidoCriado.id,
+                    id_pedido: idPedidoGerado,
                     id_produto: item.id_produto,
                     quantidade: item.quantidade,
                     valor_unitario_praticado: precoFinalItem
@@ -92,29 +93,29 @@ router.post('/', async (req, res) => {
             });
 
             await transaction('tb_pedido_item').insert(itensParaInserir);
-        }
 
-        if(percentualCashback > 0){
-            const valorGerado = valorTotalPedido * (percentualCashback / 100);
+            if (percentualCashback > 0) {
+                const valorGerado = valorTotalPedido * (percentualCashback / 100);
 
-            await transaction('tb_loja_cashback').insert({
-                id_loja: loja.id,
-                id_fornecedor: idForn,
-                id_pedido: pedidoCriado.id,
-                vl_previsto: valorGerado,
-                vl_realizado: 0,
-                pago: false,
-                dt_inc: new Date()
-            });
-            console.log(`Cashback de R$ ${valorGerado} gerado para o pedido: #${pedidoCriado.id}`);
-        }
+                await transaction('tb_loja_cashback').insert({
+                    id_loja: loja.id,
+                    id_fornecedor: idForn,
+                    id_pedido: idPedidoGerado,
+                    vl_previsto: valorGerado,
+                    vl_realizado: 0,
+                    pago: 0,
+                    dt_inc: new Date()
+                });
+                console.log(`Cashback de R$ ${valorGerado} gerado para o pedido: #${idPedidoGerado}`);
+            }
+        } 
 
-        await transaction.commit(); // Confirma a transação 
-        res.json({message: 'Pedido realizado!', pedidosIds: idsPedidosCriados})
-    } catch(err){
-        await transaction.rollback(); // Cancela todas as transaçõe caso de erro em alguma no meio
+        await transaction.commit();
+        res.json({ message: 'Pedido realizado!', pedidosIds: idsPedidosCriados })
+    } catch (err) {
+        await transaction.rollback();
         console.error("Erro ao processar o pedido ", err);
-        res.status(500).json({message: 'Erro ao processar o pedido: ' + err.message})
+        res.status(500).json({ message: 'Erro ao processar o pedido: ' + err.message })
     }
 });
 
@@ -155,7 +156,7 @@ router.get('/fornecedor', async (req, res) => {
         const itens = await db('tb_pedido_item AS pi')
             .join('tb_fornecedor_produto AS prod', 'pi.id_produto', 'prod.id')
             .join('tb_categoria AS cat', 'prod.id_categoria', 'cat.id')
-            .leftJoin('tb_loja_cashback AS cb', 'ped.id', 'cb.id_pedido')
+            .leftJoin('tb_loja_cashback AS cb', 'pi.id_pedido', 'cb.id_pedido')
             .whereIn('pi.id_pedido', pedidoIds)
             .select(
                 'pi.id_pedido',
