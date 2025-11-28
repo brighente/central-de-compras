@@ -1,5 +1,6 @@
 import React, { useState, useContext } from "react"; // Ferramentas para poder usar Estado e Context
 import AuthContext from "../context/AuthContext";  // Importamos nosso Context (cerebro)
+import { useNavigate } from 'react-router-dom';  // Importa o navigate
 
 function LoginPage() {
     const [email, setEmail] = useState('');
@@ -8,6 +9,7 @@ function LoginPage() {
     const [loading, setLoading] = useState(false);
 
     const { login } = useContext(AuthContext);  // Pegamos a função de login do nosso Context
+    const navigate = useNavigate(); // Inicializa o hook para usar o navigate
 
     const handleSubmit = async (evento) => {  // Criamos a função handleSubmit, que fará as ações relacionadas ao envio do formulário de login
         evento.preventDefault();  // Evita de recarregar a página quando for enviado o formulário
@@ -30,7 +32,13 @@ function LoginPage() {
             }
 
             setLoading(false);
-            console.log("LOGIN BEM SUCEDIDO!");
+
+            if(data.user && data.user.deve_trocar_senha) {
+                navigate('/trocar-senha-obrigatoria', { state: { token: data.token } });
+                return;
+            }
+
+            console.log('Login bem sucedido!')
             login(data.token) // Chama a função login do AuthContext, que salva o token no localStorage e no Estado
 
         } catch (err){

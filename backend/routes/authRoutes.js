@@ -44,7 +44,12 @@ router.post('/login', async (req,res) => {
         console.log("LOG: Login bem sucedido para:", email);
         res.json({
             message: 'Login bem sucedido!',
-            token
+            token,
+            user: {
+                id: usuario.id,
+                email: usuario.email,
+                deve_trocar_senha: usuario.deve_trocar_senha
+            }
         });
 
     } catch (err){

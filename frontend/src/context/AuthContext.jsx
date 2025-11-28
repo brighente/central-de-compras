@@ -6,6 +6,7 @@ const AuthContext = createContext(null); // Cria o contexto (cerebro)
 export const AuthProvider = ({ children }) => { // Cria o provedor
 
     const [authState, setAuthState] = useState({token: null, user: null}); // Cria o estado do usuário, para guardar o token e o user
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {   // Verificador do cofre
         const tokenSalvo = localStorage.getItem('authToken'); // Busca o token no localStorage
@@ -18,6 +19,7 @@ export const AuthProvider = ({ children }) => { // Cria o provedor
                 localStorage.removeItem('authToken');
             }
         }
+        setLoading(false);
     }, []) // Usar [] garante que o código rode só uma vez
 
     const login = (token) => {  // Essa função vai ser usado no loginPage
@@ -37,7 +39,7 @@ export const AuthProvider = ({ children }) => { // Cria o provedor
     }
 
     return (
-        <AuthContext.Provider value={{authState, login, logout}}>
+        <AuthContext.Provider value={{authState, loading, login, logout}}>
             {children}
         </AuthContext.Provider>
     );
