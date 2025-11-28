@@ -2,7 +2,8 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db')
 const bcrypt = require('bcryptjs')
-const jwt = require('jsonwebtoken')
+const jwt = require('jsonwebtoken');
+const authMiddleware = require('../authMiddleware');
 
 const JWT_SECRET = 'projeto-central-compras-abacate';
 
@@ -19,7 +20,8 @@ router.post('/login', async (req,res) => {
         const usuario = await db('tb_sistema_usuario AS user')
         .join('tb_sistema_usuario_perfil as profile', 'user.id', 'profile.id_usuario')
         .where({ email: email})
-        .select('user.id', 'user.email', 'user.senha', 'profile.perfil').first()
+        .select('user.id', 'user.email', 'user.senha', 'profile.perfil', 'user.deve_trocar_senha').first();
+
         if(!usuario){
             return res.status(401).json({message: 'Email ou senha inválidos!'})
         }
@@ -57,5 +59,28 @@ router.post('/login', async (req,res) => {
         res.status(500).json({message: 'Erro interno no servidor!'});
     }
 });
+
+router.post('/definir-senha', authMiddleware, async (req, res) => {
+    const { novaSenha } = req.body;
+    const userId = req.user.userId;
+
+    if(!novaSenha || novaSenha.length < 6){
+        return res.status(400).json({ message: 'Senha inválida' });
+    }
+
+    try {
+        const senhaHash = await bcrypt.hash(novaSenha, 10);
+
+        await db('tb_sistema_usuario').where({ id: userId }).update({
+            senha: senhaHash,
+            deve_trocar_senha: false
+        });
+
+        res.json({ message: 'Senha atualizada com sucesso! '});
+    } catch(err) {
+        console.error(err);
+        res.status(500).json({ message: 'Erro ao atualizar senha' });
+    }
+})
 
 module.exports = router;

@@ -54,7 +54,7 @@ export default function TrocarSenha(){
 
             alert("Senha definida com sucesso.")
 
-            login(tokenTemporario);
+            navigate('/login');
         } catch(err) {
             setError(err.message);
         } finally {

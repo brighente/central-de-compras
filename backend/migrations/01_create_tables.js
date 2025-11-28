@@ -25,6 +25,7 @@ exports.up = async function(knex){
         table.string('email').notNullable().unique();
         table.string('senha').notNullable();
         table.boolean('ativo').defaultTo(true);
+        table.boolean('deve_trocar_senha').defaultTo(false);
     })
 
     await knex.schema.createTable('tb_sistema_usuario_perfil', (table) => {

@@ -34,7 +34,7 @@ function LoginPage() {
             setLoading(false);
 
             if(data.user && data.user.deve_trocar_senha) {
-                navigate('/trocar-senha-obrigatoria', { state: { token: data.token } });
+                navigate('/trocar-senha', { state: { token: data.token } });
                 return;
             }
 

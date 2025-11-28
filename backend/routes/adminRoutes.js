@@ -38,7 +38,8 @@ router.post('/loja', async (req, res) => {
             nome: nome_fantasia,
             email: email,
             senha: senhaHash,
-            ativo: 1
+            ativo: 1,
+            deve_trocar_senha: true
         }).returning('id');
 
         await transaction('tb_sistema_usuario_perfil').insert({
@@ -70,7 +71,7 @@ router.post('/loja', async (req, res) => {
 
         res.status(201).json({
             message: 'Loja cadastrada com sucesso',
-            credencias: {
+            credenciais: {
                 usuario: email,
                 senha_temporaria: senhaProvisoria
             }
@@ -110,7 +111,8 @@ router.post('/fornecedor', async (req, res) => {
             nome: nome_fantasia,
             email: email,
             senha: senhaHash,
-            ativo: 1
+            ativo: 1,
+            deve_trocar_senha: true
         }).returning('id');
         
         await transaction('tb_sistema_usuario_perfil').insert({
