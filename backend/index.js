@@ -8,6 +8,7 @@ const produtosRoutes = require('./routes/produtosRoutes'); // Importa a rota de 
 const pedidosRoutes = require('./routes/pedidosRoutes'); // Importa a rota de pedidos
 const vitrineRoutes = require('./routes/vitrineRoutes'); // Importa a rota de vitrines (mostrar produtos)
 const condicoesRoutes = require('./routes/condicoesRoutes'); // Importa a rota de condições por estado
+const campanhasRoutes = require('./routes/campanhasRoutes'); // Importa a rota de campanhas
 
 const app = express();
 app.use(cors()); // Diz ao Express para usar o "porteiro" CORS
@@ -19,6 +20,7 @@ app.use('/api/pedidos', pedidosRoutes); // Pedidos -> /api/pedidos
 app.use('/api/vitrine', vitrineRoutes); // Vitrine -> /api/vitrine
 app.use('/api/condicoes', condicoesRoutes); // Condições -> /api/condicoes
 app.use('/api/admin', adminRoutes); // Admin -> /api/admin
+app.use('/api/campanhas', campanhasRoutes); // Campanhas -> /api/campanhas
 
 // Get fornecedores
 // Quando acessado essa rota, o SQL do knex será executado, retornando os fornecedores

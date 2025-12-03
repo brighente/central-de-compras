@@ -42,7 +42,6 @@ router.post('/', async (req, res) => {
 
         const [novoId] = await db('tb_fornecedor_produto').insert({
             id_fornecedor: fornecedor.id,
-            // Todos os 3 tão vindo do frontend
             id_categoria,
             produto,
             valor_produto

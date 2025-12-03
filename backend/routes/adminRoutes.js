@@ -10,6 +10,24 @@ const gerarSenhaProvisoria = () => {
     return Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8);
 }
 
+router.get('/lista-fornecedores', async (req, res) => {
+    try {
+        const fornecedores = await db('tb_fornecedor').select('id', 'nome_fantasia', 'cnpj');
+        res.json(fornecedores);
+    } catch(err) {
+        res.status(500).json({ message: 'Erro ao listar fornecedores' });
+    }
+});
+
+router.get('/lista-categorias', async (req, res) => {
+    try{
+        const categorias = await db('tb_categoria').select('*');
+        res.json(categorias);
+    } catch(err) {
+        res.status(500).json({ message: 'Erro ao listar categorias' });
+    }
+});
+
 router.post('/loja', async (req, res) => {
     const {
         cnpj, nome_fantasia, razao_social, email, telefone,
@@ -86,7 +104,7 @@ router.post('/loja', async (req, res) => {
 
 router.post('/fornecedor', async (req, res) => {
     const {
-        cnpj, nome_fantasia, razao_social, email, telefone,
+        cnpj, nome_fantasia, razao_social, email, telefone, logradouro, numero, bairro, cidade, estado, cep
     } = req.body;
 
     const transaction = await db.transaction();
@@ -132,6 +150,17 @@ router.post('/fornecedor', async (req, res) => {
             ativo: 1
         }).returning('id');
 
+        await transaction('tb_fornecedor_endereco').insert({
+            id_fornecedor: fornecedor.id,
+            logradouro,
+            numero,
+            bairro,
+            cidade,
+            estado,
+            cep,
+            dt_inc: new Date()
+        });
+
         await transaction.commit();
 
         res.status(201).json({
@@ -146,6 +175,33 @@ router.post('/fornecedor', async (req, res) => {
         await transaction.rollback();
         console.error("Erro ao cadastrar novo fornecedor: ", err);
         res.status(500).json({ message: 'Erro ao cadastrar fornecedor: ' + err.message });
+    }
+});
+
+router.post('/produtos', async (req, res) => {
+    const { produto, valor_produto, id_categoria, id_fornecedor } = req.body;
+
+    try{
+        const fornecedor = await db('tb_fornecedor').where({ id: id_fornecedor }).first();
+
+        if(!fornecedor){
+            return res.status(404).json({ message: 'Fornecedor não encontrado' });
+        }
+
+        await db('tb_fornecedor_produto').insert({
+            id_fornecedor,
+            id_conta: fornecedor.id_conta,
+            id_usuario: fornecedor.id_usuario,
+            id_categoria: id_categoria,
+            produto,
+            valor_produto,
+            dt_inc: new Date()
+        });
+
+        res.status(201).json({ message: 'Produto cadastrado com sucesso' });
+    } catch(err) {
+        console.error(err);
+        res.status(500).json({ message: 'Erro ao cadastrar produto' });
     }
 });
 

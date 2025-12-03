@@ -1,13 +1,18 @@
-import React, { useContext } from 'react';  // Ferramenta para poder usar um Context
-import { Routes, Route, Navigate } from 'react-router-dom'; // Importa partes importantes para a navegação entre rotas
+import React, { useContext } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
 
-import LoginPage from './components/LoginPage'; // Importa o novo componente
+import LoginPage from './components/LoginPage';
 import AdminDashboard from './components/AdminDashboard';
-import FornecedorDashboard from './components/FornecedorDashboard';
 import LojaDashboard from './components/LojaDashboard';
 import TrocarSenha from './components/TrocarSenha';
 
-import AuthContext from './context/AuthContext'; // Importamos o Context (cerebro)
+import FornecedorLayout from './components/FornecedorLayout';
+import FornecedorHome from './components/fornecedor/FornecedorHome';
+import FornecedorProdutos from './components/fornecedor/FornecedorProdutos';
+import FornecedorCampanhas from './components/fornecedor/FornecedorCampanhas';
+import GerenciarCondicoes from './components/GerenciarCondicoes';
+
+import AuthContext from './context/AuthContext';
 
 const RotaPrivada = ({ children, perfilPermitido }) => {
     const { authState, loading } = useContext(AuthContext);
@@ -59,9 +64,18 @@ function App(){
 
                 <Route path="/fornecedor" element={
                     <RotaPrivada perfilPermitido="FORNECEDOR">
-                        <FornecedorDashboard />
+                        <FornecedorLayout /> {/* O Layout com a Sidebar */}
                     </RotaPrivada>
-                } />
+                }>
+                    {/* Quando acessar /fornecedor, cai aqui */}
+                    <Route index element={<FornecedorHome />} />
+                    
+                    {/* Sub-rotas: /fornecedor/produtos, etc */}
+                    <Route path="produtos" element={<FornecedorProdutos />} />
+                    <Route path="campanhas" element={<FornecedorCampanhas />} />
+                    <Route path="condicoes" element={<GerenciarCondicoes />} />
+                    {/* Adicionar pedidos depois se quiser */}
+                </Route>
 
                 <Route path="/loja" element={
                     <RotaPrivada perfilPermitido="LOJA">
