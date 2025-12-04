@@ -22,7 +22,7 @@ export default function FornecedorCampanhas() {
     }, [authState.token]);
 
     const fetchCampanhas = () => {
-        fetch('http://localhost:3001/api/campanhas', { headers })
+        fetch('http://localhost:3001/api/campanhas/fornecedor', { headers })
             .then(r => r.json())
             .then(setCampanhas)
             .catch(console.error);

@@ -1,77 +1,116 @@
 import React, { useState } from 'react';
-import { FaBoxOpen, FaShoppingCart, FaBullhorn, FaCogs, FaChevronDown, FaChevronUp, FaSignOutAlt, FaHome, FaMoneyCheckAlt } from 'react-icons/fa';
+import Sidebar from '../shared/Sidebar'; 
+import { FaBoxOpen, FaShoppingCart, FaBullhorn, FaCogs, FaChevronDown, FaChevronUp, FaHome } from 'react-icons/fa';
 
-export default function SidebarFornecedor({ aoClicar, onLogout }) {
+// AJUSTE AQUI: Recebendo 'aoClicar' (como o pai manda) e 'activeView' (para saber qual está ativa)
+export default function SidebarFornecedor({ activeView, aoClicar }) {
+    
     const [openMenu, setOpenMenu] = useState('');
 
     const toggleMenu = (menuName) => {
         setOpenMenu(openMenu === menuName ? '' : menuName);
     };
 
-    const btnMenuStyle = {
-        width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        padding: '12px 15px', background: 'transparent', border: 'none', color: 'white',
-        cursor: 'pointer', fontWeight: 'bold', fontSize: '1rem', textAlign: 'left', borderBottom: '1px solid #00802b'
+    // Função auxiliar para garantir que não quebre se o pai não mandar 'aoClicar'
+    const handleNavigation = (viewName) => {
+        if (typeof aoClicar === 'function') {
+            aoClicar(viewName);
+        } else {
+            console.error("A prop 'aoClicar' não foi passada corretamente para SidebarFornecedor");
+        }
     };
 
-    const subItemStyle = {
-        display: 'flex', alignItems: 'center', gap: '10px', width: '100%',
-        padding: '10px 10px 10px 25px', background: 'rgba(0, 0, 0, 0.1)', border: 'none',
-        color: '#e0e0e0', cursor: 'pointer', fontSize: '0.9rem', textAlign: 'left',
-        borderBottom: '1px solid #00802b', transition: 'background 0.2s'
-    };
+    const menuItemStyle = (isActive) => ({
+        padding: '12px 15px',
+        margin: '5px 0',
+        borderRadius: '6px',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between', 
+        gap: '10px',
+        color: 'white',
+        background: isActive ? 'rgba(255,255,255,0.2)' : 'transparent',
+        borderLeft: isActive ? '4px solid #00ff55' : '4px solid transparent',
+        transition: 'all 0.2s',
+        fontWeight: isActive ? 'bold' : 'normal'
+    });
+
+    const subItemStyle = (isActive) => ({
+        padding: '10px 10px 10px 35px', 
+        margin: '2px 0',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        color: 'rgba(255,255,255,0.8)', 
+        fontSize: '0.9rem',
+        background: isActive ? 'rgba(255,255,255,0.1)' : 'transparent',
+        borderLeft: isActive ? '4px solid #00ff55' : '4px solid transparent',
+        transition: 'all 0.2s'
+    });
 
     return (
-        <aside style={{ width: '260px', backgroundColor: '#009933', color: 'white', minHeight: '100vh', display: 'flex', flexDirection: 'column', boxShadow: '2px 0 5px rgba(0,0,0,0.1)' }}>
-        
-        <div style={{ padding: '20px', borderBottom: '1px solid #00802b', backgroundColor: '#00802b' }}>
-            <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 'bold' }}>Área do Fornecedor</h2>
-        </div>
-
-        <nav style={{ flex: 1 }}>
+        <Sidebar title="ÁREA DO FORNECEDOR">
             
-            {/* DASHBOARD */}
-            <button onClick={() => aoClicar('dashboard')} style={btnMenuStyle}>
-                <div style={{display:'flex', gap:'10px', alignItems:'center'}}><FaHome /> <span>Visão Geral</span></div>
-            </button>
+            {/* --- VISÃO GERAL --- */}
+            <div 
+                style={menuItemStyle(activeView === 'dashboard')} 
+                onClick={() => handleNavigation('dashboard')}
+            >
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <FaHome /> Visão Geral
+                </div>
+            </div>
 
-            {/* GESTÃO COMERCIAL */}
+            {/* --- GESTÃO COMERCIAL (DROPDOWN) --- */}
             <div>
-                <button onClick={() => toggleMenu('comercial')} style={btnMenuStyle}>
+                <div 
+                    style={menuItemStyle(openMenu === 'comercial' || ['produtos', 'campanhas', 'configuracoes'].includes(activeView))} 
+                    onClick={() => toggleMenu('comercial')}
+                >
                     <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                    <FaBoxOpen /> <span>Comercial</span>
+                        <FaBoxOpen /> Comercial
                     </div>
-                    {openMenu === 'comercial' ? <FaChevronUp size={10}/> : <FaChevronDown size={10}/>}
-                </button>
+                    {openMenu === 'comercial' ? <FaChevronUp size={12}/> : <FaChevronDown size={12}/>}
+                </div>
 
                 {openMenu === 'comercial' && (
-                    <div style={{ backgroundColor: '#007a29' }}>
-                        <button onClick={() => aoClicar('produtos')} style={subItemStyle}><FaBoxOpen /> Meus Produtos</button>
-                        
-                        <button onClick={() => aoClicar('campanhas')} style={subItemStyle}><FaBullhorn /> Campanhas Promo</button>
+                    <div style={{ marginBottom: '10px' }}>
+                        <div 
+                            style={subItemStyle(activeView === 'produtos')} 
+                            onClick={() => handleNavigation('produtos')}
+                        >
+                            <FaBoxOpen size={14} /> Meus Produtos
+                        </div>
 
-                        <button onClick={() => aoClicar('configuracoes')} style={subItemStyle}> <FaCogs /> Configurações </button>
+                        <div 
+                            style={subItemStyle(activeView === 'campanhas')} 
+                            onClick={() => handleNavigation('campanhas')}
+                        >
+                            <FaBullhorn size={14} /> Campanhas Promo
+                        </div>
+
+                        <div 
+                            style={subItemStyle(activeView === 'configuracoes')} 
+                            onClick={() => handleNavigation('configuracoes')}
+                        >
+                            <FaCogs size={14} /> Configurações
+                        </div>
                     </div>
                 )}
             </div>
 
-            {/* PEDIDOS */}
-            <button onClick={() => aoClicar('pedidos')} style={btnMenuStyle}>
-                <div style={{display:'flex', gap:'10px', alignItems:'center'}}><FaShoppingCart /> <span>Pedidos Recebidos</span></div>
-            </button>
+            {/* --- PEDIDOS --- */}
+            <div 
+                style={menuItemStyle(activeView === 'pedidos')} 
+                onClick={() => handleNavigation('pedidos')}
+            >
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <FaShoppingCart /> Pedidos Recebidos
+                </div>
+            </div>
 
-        </nav>
-
-        <div style={{ padding: '15px', borderTop: '1px solid #00802b' }}>
-            <button onClick={onLogout} style={{ 
-                display: 'flex', alignItems: 'center', gap: '10px', 
-                background: 'rgba(255,255,255,0.1)', border: 'none', 
-                color: 'white', cursor: 'pointer', width: '100%', 
-                padding: '10px', borderRadius: '4px' 
-            }}>
-            <FaSignOutAlt /> Sair
-            </button>
-        </div>
-        </aside>
+        </Sidebar>
     );
 }

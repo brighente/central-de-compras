@@ -1,11 +1,24 @@
 import React, { useContext } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom'; // Adicionei useLocation
 import AuthContext from '../../context/AuthContext';
 import SidebarFornecedor from './SidebarFornecedor';
 
 export default function FornecedorLayout() {
-    const { authState, logout } = useContext(AuthContext);
+    const { authState } = useContext(AuthContext); // logout removido daqui, a Sidebar já faz isso
     const navigate = useNavigate();
+    const location = useLocation();
+
+    // Lógica para descobrir qual item do menu deve ficar "aceso" baseado na URL
+    const getActiveView = () => {
+        const path = location.pathname;
+        
+        // Se for exatamente /fornecedor, é o dashboard
+        if (path === '/fornecedor' || path === '/fornecedor/') return 'dashboard';
+        
+        // Se for /fornecedor/produtos, retorna 'produtos', etc.
+        // Remove '/fornecedor/' do caminho para sobrar só o nome da seção
+        return path.replace('/fornecedor/', '').split('/')[0];
+    };
 
     const navegarPara = (caminho) => {
         if (caminho === 'dashboard') navigate('/fornecedor');
@@ -15,7 +28,15 @@ export default function FornecedorLayout() {
     return (
         <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f4f6f8' }}>
             
-            <SidebarFornecedor aoClicar={navegarPara} onLogout={logout} />
+            {/* 
+                CORREÇÃO: 
+                1. Passamos activeView (calculado acima).
+                2. Removemos onLogout (a Sidebar interna já gerencia isso).
+            */}
+            <SidebarFornecedor 
+                aoClicar={navegarPara} 
+                activeView={getActiveView()} 
+            />
 
             <div style={{ flex: 1, padding: '40px', overflowY: 'auto' }}>
                 <header style={{ marginBottom: '30px', borderBottom: '1px solid #ddd', paddingBottom: '15px' }}>
