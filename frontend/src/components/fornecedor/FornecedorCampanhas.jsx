@@ -9,7 +9,6 @@ export default function FornecedorCampanhas() {
     const [campanhaForm, setCampanhaForm] = useState({ descricao: '', valor_meta: '', duracao_dias: '' });
     const [loading, setLoading] = useState(false);
 
-    // --- BUSCAR CAMPANHAS ---
     useEffect(() => {
         if (!authState.token) return;
         fetchCampanhas();
@@ -19,12 +18,25 @@ export default function FornecedorCampanhas() {
         fetch('http://localhost:3001/api/campanhas', {
             headers: { 'Authorization': `Bearer ${authState.token}` }
         })
-        .then(r => r.json())
-        .then(setMinhasCampanhas)
-        .catch(console.error);
+        .then(async (r) => {
+            if(!r.ok){
+                throw new Error('Erro ao carregar');
+            }
+            return r.json();
+        })
+        .then(data => {
+            if(Array.isArray(data)){
+                setMinhasCampanhas(data);
+            } else {
+                setMinhasCampanhas([]);
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            setMinhasCampanhas([]);
+        });
     };
 
-    // --- SALVAR NOVA CAMPANHA ---
     const handleSalvar = async (e) => {
         e.preventDefault();
         setLoading(true);
@@ -100,7 +112,9 @@ export default function FornecedorCampanhas() {
             {/* --- COLUNA 2: LISTA ATIVA --- */}
             <div>
                 <h2 style={{marginTop: 0, color: '#333', fontSize: '1.2rem', marginBottom: '15px'}}>Campanhas Ativas</h2>
-                {minhasCampanhas.length === 0 ? <p style={{color: '#999'}}>Nenhuma campanha ativa no momento.</p> : (
+                {!Array.isArray(minhasCampanhas) || minhasCampanhas.length === 0 ? (
+                    <p style={{color: '#999'}}>Nenhuma campanha ativa no momento.</p>
+                ) : (
                     <div style={{display: 'flex', flexDirection: 'column', gap: '15px'}}>
                         {minhasCampanhas.map(c => (
                             <div key={c.id} style={{background: 'white', padding: '20px', borderRadius: '8px', borderLeft: '4px solid #17a2b8', boxShadow: '0 2px 5px rgba(0,0,0,0.05)'}}>

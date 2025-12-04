@@ -93,7 +93,7 @@ export default function AdminDashboard(){
                         {/* --- FORMULÁRIO LOJA OU FORNECEDOR --- */}
                         {(aba === 'loja' || aba === 'fornecedor') && (
                             <>
-                                <div style={{ gridColumn: '1 / -1', borderBottom: '1px solid #eee', paddingBottom: '10px', marginBottom: '10px', color: '#888', fontWeight: 'bold', fontSize: '0.9rem' }}>DADOS DA EMPRESA</div>
+                                <div style={{ gridColumn: '1 / -1', borderBottom: '1px solid #eee', paddingBottom: '10px', marginBottom: '10px', color: '#888', fontWeight: 'bold', fontSize: '0.9rem' }}>DADOS {aba.toUpperCase()}</div>
                                 
                                 <div>
                                     <label style={labelStyle}>CNPJ</label>

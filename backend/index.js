@@ -22,21 +22,6 @@ app.use('/api/condicoes', condicoesRoutes); // Condições -> /api/condicoes
 app.use('/api/admin', adminRoutes); // Admin -> /api/admin
 app.use('/api/campanhas', campanhasRoutes); // Campanhas -> /api/campanhas
 
-// Get fornecedores
-// Quando acessado essa rota, o SQL do knex será executado, retornando os fornecedores
-app.get('/api/fornecedores', async (req, res) => {
-  console.log("LOG: Recebi uma requisição para /api/fornecedores");
-  
-  try {
-    const fornecedores = await db('tb_fornecedor').select('id', 'nome_fantasia'); // SELECT id, nome_fantasia FROM tb_fornecedor
-    res.json(fornecedores); // Transformando a resposta do SQL em JSON
-
-  } catch (err) {
-    console.error("Erro ao buscar no banco:", err);
-    res.status(500).json({ message: 'Erro no servidor ao buscar fornecedores.' });
-  }
-});
-
 
 app.listen(3001, () => {
   console.log(`🚀 Servidor Backend rodando na http://localhost:${3001}`);
