@@ -1,5 +1,5 @@
 import React, { useContext } from 'react';
-import AuthContext from '../context/AuthContext'; // Garanta que o nome do arquivo é AuthContext
+import AuthContext from '../../context/AuthContext'; // Garanta que o nome do arquivo é AuthContext
 
 export default function Sidebar({ title, children }) {
     const { logout, authState } = useContext(AuthContext);

@@ -2,14 +2,14 @@ import React, { useContext } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 
 import LoginPage from './components/LoginPage';
-import AdminDashboard from './components/AdminDashboard';
-import LojaDashboard from './components/LojaDashboard';
+import AdminDashboard from './components/admin/AdminDashboard';
+import LojaDashboard from './components/loja/LojaDashboard';
 import TrocarSenha from './components/TrocarSenha';
 
-import FornecedorLayout from './components/FornecedorLayout';
+import FornecedorLayout from './components/fornecedor/FornecedorLayout';
 import FornecedorHome from './components/fornecedor/FornecedorHome';
 import FornecedorProdutos from './components/fornecedor/FornecedorProdutos';
-import FornecedorConfiguracoes from './components/FornecedorConfiguracoes';
+import FornecedorConfiguracoes from './components/fornecedor/FornecedorConfiguracoes';
 import FornecedorPedidos from './components/fornecedor/FornecedorPedidos';
 import FornecedorCampanhas from './components/fornecedor/FornecedorCampanhas';
 
