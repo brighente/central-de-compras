@@ -1,155 +1,196 @@
 import React, { useState, useEffect, useContext } from 'react';
 import AuthContext from '../context/AuthContext';
+import { FaTrash, FaEdit } from 'react-icons/fa';
 
-export default function GerenciarCondicoes() {
+const GerenciarCondicoes = () => {
     const { authState } = useContext(AuthContext);
     const [regras, setRegras] = useState([]);
+    
+    // Inputs
+    const [estado, setEstado] = useState('');
+    const [cashback, setCashback] = useState('');
+    const [prazo, setPrazo] = useState('');
+    const [acrescimo, setAcrescimo] = useState('');
 
-    const [form, setForm] = useState({
-        estado: 'SC',
-        valor_cashback_percentual: 0,
-        prazo_pagamento_dias: 30,
-        acrescimo_desconto_unitario_valor: 0
-    });
+    const [editingId, setEditingId] = useState(null);
 
-    const estadosBrasil = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO']
-
-    const fetchRegras = async () => {
-        try {
-            const res = await fetch('http://localhost:3001/api/condicoes', {
-                headers: {
-                    'Authorization': `Bearer ${authState.token}`
-                }
-            });
-
-            if(!res.ok){
-                console.error(err);
-                return;
-            }
-
-            const data = await res.json();
-            if (Array.isArray(data)) {
-                setRegras(data);
-            } else {
-                setRegras([]);
-            }
-        } catch(err){
-            console.error(err)
-        }
-    }
+    // Helper para token
+    const getToken = () => authState?.token || localStorage.getItem('token');
 
     useEffect(() => {
         fetchRegras();
-    }, [])
+    }, []);
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        try{
+    const fetchRegras = async () => {
+        try {
+            const token = getToken();
             const res = await fetch('http://localhost:3001/api/condicoes', {
-                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/json'
+                }
+            });
+
+            // Verifica resposta antes de converter para JSON
+            if (!res.ok) {
+                const text = await res.text();
+                throw new Error(`Erro API (${res.status}): Conteúdo não é JSON válido.`);
+            }
+
+            const data = await res.json();
+            setRegras(data);
+        } catch (error) {
+            console.error('Erro ao buscar regras:', error);
+        }
+    };
+
+    const handleEdit = (item) => {
+        setEditingId(item.id);
+        setEstado(item.estado); 
+        setCashback(item.valor_cashback_percentual);
+        setPrazo(item.prazo_pagamento_dias);
+        setAcrescimo(item.acrescimo_desconto_unitario_valor);
+    };
+
+    const handleCancel = () => {
+        setEditingId(null);
+        setEstado('');
+        setCashback('');
+        setPrazo('');
+        setAcrescimo('');
+    };
+
+    const handleSave = async (e) => {
+        e.preventDefault();
+        
+        const payload = {
+            estado, 
+            valor_cashback_percentual: parseFloat(cashback), 
+            prazo_pagamento_dias: parseInt(prazo), 
+            acrescimo_desconto_unitario_valor: parseFloat(acrescimo)
+        };
+
+        const url = editingId ? `http://localhost:3001/api/condicoes/${editingId}` : 'http://localhost:3001/api/condicoes';
+        const method = editingId ? 'PUT' : 'POST';
+
+        try {
+            const token = getToken();
+            const res = await fetch(url, {
+                method: method,
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${authState.token}`
+                    'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify(form)
+                body: JSON.stringify(payload)
             });
 
-            if(res.ok){
-                alert('Regra salva!');
+            if (res.ok) {
+                handleCancel();
                 fetchRegras();
             } else {
-                alert('Erro ao salvar');
+                // Tenta pegar erro JSON, se falhar, usa mensagem genérica
+                const err = await res.json().catch(() => ({}));
+                alert(err.message || 'Erro ao salvar dados');
             }
-        } catch(err){
-            console.error(err)
+        } catch (error) {
+            console.error('Erro:', error);
+            alert('Erro de conexão.');
         }
-    }
+    };
 
-    const handleDeletar = async(id) => {
-        if(!confirm('Tem certeza que deseja excluir essa condição?')){
-            return
-        }
-
-        try{
-            const res = await fetch(`http://localhost:3001/api/condicoes/${id}`,{
+    const handleDelete = async (id) => {
+        if (!confirm('Deseja remover esta regra?')) return;
+        try {
+            const token = getToken();
+            const res = await fetch(`/api/condicoes/${id}`, {
                 method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${authState.token}`}
+                headers: { 'Authorization': `Bearer ${token}` }
             });
-
-            if(res.ok){
+            if (res.ok) {
                 fetchRegras();
             } else {
-                const data = await res.json();
-                alert(data.message || 'Erro ao deletar');
+                alert('Erro ao deletar.');
             }
-        } catch(err){
-            console.error(err)
+        } catch (error) { 
+            console.error(error); 
         }
-    }
+    };
+
+    const estadosBrasil = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
 
     return (
-    <div>
-        <h2 style={{ color: 'var(--cor-sidebar)', marginBottom: '20px' }}>Condições por Estado (UF)</h2>
-
-        {/* FORMULÁRIO */}
-        <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.05)', marginBottom: '30px', borderLeft: '5px solid #00aaff' }}>
-            <h3 style={{ marginTop: 0, fontSize: '1rem', color: '#666' }}>Configurar Regra Regional</h3>
-        
-            <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '15px', alignItems: 'end' }}>
-                
+        <div className="p-4 bg-white shadow rounded">
+            <h2 className="text-xl font-bold mb-4">Gerenciar Condições por Estado</h2>
+            
+            <form onSubmit={handleSave} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end mb-6 bg-gray-50 p-4 rounded border">
                 <div>
-                    <label style={{ display: 'block', fontSize: '0.8rem', marginBottom: '5px' }}>Estado (UF)</label>
+                    <label className="block text-xs font-bold mb-1">Estado</label>
                     <select 
-                        value={form.estado} 
-                        onChange={e => setForm({...form, estado: e.target.value})}
-                        style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', background: 'white' }}>
-                        {estadosBrasil.map(uf => <option key={uf} value={uf}>{uf}</option>)}
+                        value={estado} 
+                        onChange={e => setEstado(e.target.value)} 
+                        className="border p-2 rounded w-full"
+                        disabled={!!editingId}
+                        required
+                    >
+                        <option value="">Selecione</option>
+                        {estadosBrasil.map(uf => <option value={uf} key={uf}> {uf} </option>)}
                     </select>
                 </div>
 
                 <div>
-                    <label style={{ display: 'block', fontSize: '0.8rem', marginBottom: '5px' }}>Cashback (%)</label>
-                    <input type="number" step="0.1" value={form.valor_cashback_percentual} onChange={e => setForm({...form, valor_cashback_percentual: e.target.value})} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }} />
+                    <label className="block text-xs font-bold mb-1">Cashback (%)</label>
+                    <input type="number" step="0.01" value={cashback} onChange={e => setCashback(e.target.value)} className="border p-2 rounded w-full"/>
                 </div>
 
                 <div>
-                    <label style={{ display: 'block', fontSize: '0.8rem', marginBottom: '5px' }}>Prazo (Dias)</label>
-                    <input type="number" value={form.prazo_pagamento_dias} onChange={e => setForm({...form, prazo_pagamento_dias: e.target.value})} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }} />
+                    <label className="block text-xs font-bold mb-1">Prazo (Dias)</label>
+                    <input type="number" value={prazo} onChange={e => setPrazo(e.target.value)} className="border p-2 rounded w-full"/>
                 </div>
 
                 <div>
-                    <label style={{ display: 'block', fontSize: '0.8rem', marginBottom: '5px' }}>Acréscimo/Desc. (R$)</label>
-                    <input type="number" step="0.01" value={form.acrescimo_desconto_unitario_valor} onChange={e => setForm({...form, acrescimo_desconto_unitario_valor: e.target.value})} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }} />
+                    <label className="block text-xs font-bold mb-1">Acrés/Desc (R$)</label>
+                    <input type="number" step="0.01" value={acrescimo} onChange={e => setAcrescimo(e.target.value)} className="border p-2 rounded w-full"/>
                 </div>
 
-                <button type="submit" style={{ backgroundColor: '#00aaff', color: 'white', border: 'none', padding: '10px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}> SALVAR REGRA </button>
+                <div className="flex gap-2">
+                    <button type="submit" className={`w-full py-2 rounded text-white font-semibold ${editingId ? 'bg-blue-600' : 'bg-green-600'}`}>
+                        {editingId ? 'Salvar' : 'Adicionar'}
+                    </button>
+                    {editingId && (
+                        <button type="button" onClick={handleCancel} className="px-3 bg-red-400 rounded text-white font-bold">✕</button>
+                    )}
+                </div>
             </form>
-            <p style={{fontSize: '0.8rem', color: '#999', marginTop: '10px'}}>* O sistema usará a regra do estado da Loja no momento do pedido.</p>
-        </div>
 
-        {/* LISTA */}
-        <div style={{ display: 'grid', gap: '15px' }}>
-            {regras.map(regra => (
-                <div key={regra.id} style={{ backgroundColor: 'white', padding: '15px', borderRadius: '8px', border: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                        <div style={{ backgroundColor: '#eee', padding: '10px', borderRadius: '8px', fontWeight: 'bold', fontSize: '1.2rem', width: '50px', textAlign: 'center' }}>
-                        {regra.estado}
-                        </div>
-                        
-                        <div>
-                            <div style={{color: 'green', fontWeight: '600'}}>Cashback: {regra.valor_cashback_percentual}%</div>
-                            <div style={{fontSize: '0.9rem'}}>Prazo: {regra.prazo_pagamento_dias} dias</div>
-                            <div style={{fontSize: '0.9rem', color: regra.acrescimo_desconto_unitario_valor > 0 ? 'red' : 'blue'}}>
-                                Ajuste: R$ {regra.acrescimo_desconto_unitario_valor}
-                        </div>
-                        </div>
-                    </div>
-
-                    <button onClick={() => handleDeletar(regra.id)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.2rem' }}> 🗑️ </button>
-                </div>
-            ))}
+            <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                    <thead>
+                        <tr className="border-b bg-gray-100">
+                            <th className="p-2">UF</th>
+                            <th className="p-2">Cashback</th>
+                            <th className="p-2">Prazo</th>
+                            <th className="p-2">Acréscimo</th>
+                            <th className="p-2 text-right">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {regras && regras.map(r => (
+                            <tr key={r.id} className="border-b hover:bg-gray-50">
+                                <td className="p-2 font-bold">{r.estado}</td>
+                                <td className="p-2">{r.valor_cashback_percentual ? `${r.valor_cashback_percentual}%` : '-'}</td>
+                                <td className="p-2">{r.prazo_pagamento_dias ? `${r.prazo_pagamento_dias} dias` : '-'}</td>
+                                <td className="p-2">{r.acrescimo_desconto_unitario_valor ? `R$ ${r.acrescimo_desconto_unitario_valor}` : '-'}</td>
+                                <td className="p-2 text-right">
+                                    <button onClick={() => handleEdit(r)} className="text-blue-600 mr-3 font-medium"> <FaEdit className="mr-1" /> </button>
+                                    <button onClick={() => handleDelete(r.id)} className="text-red-600 font-medium"> <FaTrash /> </button>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
         </div>
-    </div>
-    )
-}
+    );
+};
+
+export default GerenciarCondicoes;

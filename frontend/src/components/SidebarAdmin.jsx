@@ -47,17 +47,15 @@ export default function SidebarAdmin({ aoClicar, onLogout }) {
 
             {/* --- MENU LISTAS --- */}
             <div>
-            <button onClick={() => toggleMenu('listas')} className={btnMenu}>
-                <div className="flex items-center gap-3">
-                <FaList /> <span>Listas</span>
-                </div>
-                {openMenu === 'listas' ? <FaChevronUp size={12}/> : <FaChevronDown size={12}/>}
-            </button>
-            
-            {/* Sub-menu Listas (Se tiver) */}
-            <div className={`overflow-hidden transition-all duration-300 ${openMenu === 'listas' ? 'max-h-96 bg-[#007a29]' : 'max-h-0'}`}>
-                {/* Adicione os botões de lista aqui depois */}
-            </div>
+                    <button onClick={() => toggleMenu('listas')} className={btnMenu}>
+                        <div className="flex items-center gap-3"><FaList /> <span>Gerenciar</span></div>
+                        {openMenu === 'listas' ? <FaChevronUp size={12}/> : <FaChevronDown size={12}/>}
+                    </button>
+                    <div className={`overflow-hidden transition-all duration-300 ${openMenu === 'listas' ? 'max-h-96 bg-[#007a29]' : 'max-h-0'}`}>
+                        <button onClick={() => aoClicar('lista_loja')} className={linkBase}><FaStore /> Listar Lojas</button>
+                        <button onClick={() => aoClicar('lista_fornecedor')} className={linkBase}><FaTruck /> Listar Fornecedores</button>
+                        <button onClick={() => aoClicar('lista_produto')} className={linkBase}><FaBoxOpen /> Listar Produtos</button>
+                    </div>
             </div>
 
         </nav>
@@ -68,7 +66,7 @@ export default function SidebarAdmin({ aoClicar, onLogout }) {
             onClick={onLogout} 
             className="flex items-center justify-center gap-2 w-full p-2 rounded hover:bg-white/10 transition-colors font-medium"
             >
-            <FaSignOutAlt /> Sair do Sistema
+            <FaSignOutAlt /> Sair
             </button>
         </div>
     </aside>

@@ -5,13 +5,15 @@ import LoginPage from './components/LoginPage';
 import AdminDashboard from './components/AdminDashboard';
 import LojaDashboard from './components/LojaDashboard';
 import TrocarSenha from './components/TrocarSenha';
+import GerenciarCondicoes from './components/GerenciarCondicoes';
+import CondicoesPagamento from './components/GerenciarPagamento';
 
 import FornecedorLayout from './components/FornecedorLayout';
 import FornecedorHome from './components/fornecedor/FornecedorHome';
 import FornecedorProdutos from './components/fornecedor/FornecedorProdutos';
 import FornecedorCampanhas from './components/fornecedor/FornecedorCampanhas';
 import FornecedorPedidos from './components/fornecedor/FornecedorPedidos';
-import GerenciarCondicoes from './components/GerenciarCondicoes';
+
 
 import AuthContext from './context/AuthContext';
 
@@ -75,7 +77,8 @@ function App(){
                     <Route path="produtos" element={<FornecedorProdutos />} />
                     <Route path="pedidos" element={<FornecedorPedidos />} />
                     <Route path="campanhas" element={<FornecedorCampanhas />} />
-                    <Route path="condicoes" element={<GerenciarCondicoes />} />
+                    <Route path="condicoes-estado" element={<GerenciarCondicoes />} />
+                    <Route path="condicoes-pagamento" element={<CondicoesPagamento />} />
                 </Route>
 
                 <Route path="/loja" element={
