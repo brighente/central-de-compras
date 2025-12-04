@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FaBoxOpen, FaShoppingCart, FaBullhorn, FaMapMarkedAlt, FaChevronDown, FaChevronUp, FaSignOutAlt, FaHome, FaMoneyCheckAlt } from 'react-icons/fa';
+import { FaBoxOpen, FaShoppingCart, FaBullhorn, FaCogs, FaChevronDown, FaChevronUp, FaSignOutAlt, FaHome, FaMoneyCheckAlt } from 'react-icons/fa';
 
 export default function SidebarFornecedor({ aoClicar, onLogout }) {
     const [openMenu, setOpenMenu] = useState('');
@@ -48,13 +48,9 @@ export default function SidebarFornecedor({ aoClicar, onLogout }) {
                     <div style={{ backgroundColor: '#007a29' }}>
                         <button onClick={() => aoClicar('produtos')} style={subItemStyle}><FaBoxOpen /> Meus Produtos</button>
                         
-                        {/* Rota para o seu arquivo antigo (Regras Regionais) */}
-                        <button onClick={() => aoClicar('condicoes-estado')} style={subItemStyle}><FaMapMarkedAlt /> Regras por Estado</button>
-                        
-                        {/* Rota para o arquivo novo (Formas de Pagamento) */}
-                        <button onClick={() => aoClicar('condicoes-pagamento')} style={subItemStyle}><FaMoneyCheckAlt /> Formas Pagamento</button>
-                        
                         <button onClick={() => aoClicar('campanhas')} style={subItemStyle}><FaBullhorn /> Campanhas Promo</button>
+
+                        <button onClick={() => aoClicar('configuracoes')} style={subItemStyle}> <FaCogs /> Configurações </button>
                     </div>
                 )}
             </div>
