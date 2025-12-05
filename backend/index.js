@@ -9,6 +9,7 @@ const pedidosRoutes = require('./routes/pedidosRoutes'); // Importa a rota de pe
 const vitrineRoutes = require('./routes/vitrineRoutes'); // Importa a rota de vitrines (mostrar produtos)
 const condicoesRoutes = require('./routes/condicoesRoutes'); // Importa a rota de condições por estado
 const campanhasRoutes = require('./routes/campanhasRoutes'); // Importa a rota de campanhas
+const perfilRoutes = require('./routes/perfilRoutes');
 
 const app = express();
 app.use(cors()); // Diz ao Express para usar o "porteiro" CORS
@@ -21,6 +22,7 @@ app.use('/api/vitrine', vitrineRoutes); // Vitrine -> /api/vitrine
 app.use('/api/condicoes', condicoesRoutes); // Condições -> /api/condicoes
 app.use('/api/admin', adminRoutes); // Admin -> /api/admin
 app.use('/api/campanhas', campanhasRoutes); // Campanhas -> /api/campanhas
+app.use('/api/perfil', perfilRoutes); // Perfis -> api/perfil
 
 
 app.listen(3001, () => {

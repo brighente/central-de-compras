@@ -1,19 +1,17 @@
 import React, { useContext, useState } from 'react';
+import { Outlet } from 'react-router-dom'; // <--- IMPORTANTE: Substitui a renderização condicional
 import AuthContext from '../../context/AuthContext';
 import CartContext from '../../context/CartContext';
 import { FaCheckCircle } from 'react-icons/fa';
 
-// Importando os componentes modularizados
+// Importando a Sidebar atualizada
 import SidebarLoja from './SidebarLoja';
-import LojaVitrine from './LojaVitrine';
-import LojaPedidos from './LojaPedidos';
 
 export default function LojaDashboard() {
     const { authState } = useContext(AuthContext);
     const { cartItens, limparCart, cartTotal } = useContext(CartContext);
 
-    // Navegação
-    const [view, setView] = useState('vitrine');
+    // NÃO PRECISAMOS MAIS DO STATE 'view'. Quem controla isso agora é a URL.
 
     // Estado do Modal de Checkout
     const [showCheckout, setShowCheckout] = useState(false);
@@ -49,14 +47,14 @@ export default function LojaDashboard() {
             limparCart();
             setShowCheckout(false);
             setFormaPagamento('');
-            setView('pedidos');
+            // Opcional: Redirecionar para pedidos via navigate('/loja/meus-pedidos') se quiser
         } catch(err) {
             alert("Erro ao realizar pedido.");
             console.error(err);
         }
     };
 
-    // Estilos do Modal e Layout
+    // Estilos
     const styles = {
         mainContainer: { flex: 1, backgroundColor: '#f4f6f8', minHeight: '100vh', display: 'flex' },
         contentArea: { flex: 1, padding: '30px', overflowY: 'auto', height: '100vh' },
@@ -67,16 +65,15 @@ export default function LojaDashboard() {
     return (
         <div style={styles.mainContainer}>
             
-            {/* SIDEBAR COM CARRINHO INTEGRADO */}
+            {/* SIDEBAR: Não passamos mais 'activeView' nem 'setView' */}
             <SidebarLoja 
-                activeView={view} 
-                setView={setView} 
                 onCheckout={handleOpenCheckout} 
             />
 
-            {/* ÁREA DE CONTEÚDO DINÂMICA */}
+            {/* ÁREA DE CONTEÚDO */}
             <div style={styles.contentArea}>
-                {view === 'vitrine' ? <LojaVitrine /> : <LojaPedidos />}
+                {/* O Outlet renderiza o componente filho da rota definida no App.jsx (Vitrine, Pedidos ou Perfil) */}
+                <Outlet />
             </div>
 
             {/* MODAL DE CHECKOUT */}
