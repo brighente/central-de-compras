@@ -165,9 +165,9 @@ export default function AdminDashboard(){
                             <thead>
                                 <tr style={{ borderBottom: '2px solid #eee', textAlign: 'left' }}>
                                     <th style={thStyle}>ID</th>
-                                    <th style={thStyle}>Nome / Produto</th>
-                                    {aba === 'lista_produto' && <th style={thStyle}>Fornecedor</th>} {/* NOVA COLUNA */}
-                                    {aba !== 'lista_produto' && <th style={thStyle}>CNPJ / Email</th>}
+                                    <th style={thStyle}>Nome/Produto</th>
+                                    {aba === 'lista_produto' && <th style={thStyle}>Fornecedor</th>}
+                                    {aba !== 'lista_produto' && <th style={thStyle}>CNPJ/Email</th>}
                                     {aba === 'lista_produto' ? <th style={thStyle}>Preço</th> : <th style={thStyle}>Cidade</th>}
                                     <th style={thStyle}>Ações</th>
                                 </tr>
