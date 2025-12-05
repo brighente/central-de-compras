@@ -275,7 +275,6 @@ export default function PerfilLoja() {
                             </div>
                             <div>
                                 <label style={{ fontSize: '0.8rem', color: '#666' }}>Telefone</label>
-                                {/* MÁSCARA INTELIGENTE: Aceita tanto fixo quanto celular automaticamente */}
                                 <IMaskInput 
                                     mask={[
                                         { mask: '(00) 0000-0000' }, 

@@ -1,16 +1,18 @@
+// ... (imports permanecem iguais)
 import React, { useState, useContext, useEffect } from 'react';
 import AuthContext from '../../context/AuthContext';
 import SidebarAdmin from './SidebarAdmin';
 import { FaTrash, FaEdit, FaTimes, FaCheckCircle, FaCopy } from 'react-icons/fa';
+import { IMaskInput } from 'react-imask'; // Importação do IMaskInput
 
 export default function AdminDashboard(){
+    // ... (Estados, initialFormState e useEffects permanecem iguais)
     const { logout, authState } = useContext(AuthContext);
     
     const [aba, setAba] = useState('loja'); 
     const [editandoId, setEditandoId] = useState(null); 
     const [resultado, setResultado] = useState(null);
     
-    // NOVO: Estado para armazenar as credenciais temporárias logo após o cadastro
     const [credenciaisGeradas, setCredenciaisGeradas] = useState(null);
     
     const [listaFornecedores, setListaFornecedores] = useState([]);
@@ -25,7 +27,6 @@ export default function AdminDashboard(){
 
     const [form, setForm] = useState(initialFormState);
 
-    // Limpa credenciais ao mudar de aba
     useEffect(() => {
         setCredenciaisGeradas(null);
     }, [aba]);
@@ -54,18 +55,48 @@ export default function AdminDashboard(){
         }
     }, [aba, authState.token]);
 
+
+    // 🎯 FUNÇÃO CORRIGIDA: Garante que todos os campos sejam preenchidos
     const handleEdit = (item) => {
         setEditandoId(item.id);
         setResultado(null);
-        setCredenciaisGeradas(null); // Limpa msg de sucesso anterior
+        setCredenciaisGeradas(null); 
 
-        setForm({
+        // 1. Cria um objeto base que preenche todos os campos definidos em initialFormState
+        const baseForm = {
+            // Usa o item como base, garantindo que nome_fantasia, razao_social, etc. sejam preenchidos.
             ...item, 
-            valor_produto: item.valor_produto || '',
-            id_categoria: item.id_categoria || '',
-            id_fornecedor: item.id_fornecedor || ''
-        });
+            
+            // Tratamento de campos que podem ser nulos no DB ou precisam de conversão:
+            
+            // Campos mascarados (IMaskInput) devem aceitar o valor puro do DB:
+            cnpj: item.cnpj || '',
+            telefone: item.telefone || '',
+            cep: item.cep || '',
+            
+            // Campos de texto que podem ser nulos
+            nome_fantasia: item.nome_fantasia || '',
+            razao_social: item.razao_social || '',
+            logradouro: item.logradouro || '',
+            numero: item.numero || '',
+            bairro: item.bairro || '',
+            cidade: item.cidade || '',
+            estado: item.estado || 'SC', 
 
+            // Campos específicos de Produto
+            produto: item.produto || '',
+            
+            // Trata valores numéricos para o campo de texto (input type="number")
+            valor_produto: item.valor_produto ? String(parseFloat(item.valor_produto).toFixed(2)) : '',
+
+            // Trata chaves estrangeiras (IDs) para preencher o <select> (sempre como string)
+            id_categoria: item.id_categoria ? String(item.id_categoria) : '',
+            id_fornecedor: item.id_fornecedor ? String(item.id_fornecedor) : ''
+        };
+        
+        setForm(baseForm);
+
+        // Muda para a aba do formulário correspondente
         if(aba === 'lista_loja') setAba('loja');
         if(aba === 'lista_fornecedor') setAba('fornecedor');
         if(aba === 'lista_produto') setAba('produto');
@@ -77,7 +108,18 @@ export default function AdminDashboard(){
         setResultado(null);
     };
 
+    const handleChange = (e) => {
+        setForm({...form, [e.target.name]: e.target.value});
+    };
+
+    const handleMaskChange = (value, name) => {
+        // 'value' aqui é o valor sem a máscara (apenas números)
+        setForm(prev => ({ ...prev, [name]: value }));
+    };
+
+    // ... (handleDelete e handleSubmit permanecem iguais)
     const handleDelete = async (id) => {
+        // ... (lógica de exclusão)
         const confirmacao1 = window.confirm(
             "⚠️ PERIGO: Você tem certeza que deseja excluir este registro?\n\n" +
             "Isso forçará a exclusão de TODOS os dados vinculados.\n\n" +
@@ -117,10 +159,17 @@ export default function AdminDashboard(){
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setCredenciaisGeradas(null); // Reseta msg anterior
+        setCredenciaisGeradas(null); 
         
         let url = 'http://localhost:3001/api/admin';
         let method = 'POST';
+
+        // Prepara os dados: remove a formatação dos campos mascarados
+        const formToSend = { ...form };
+        // Garante que os campos mascarados só contenham números, caso o DB espere assim.
+        if (formToSend.cnpj) formToSend.cnpj = formToSend.cnpj.replace(/\D/g, '');
+        if (formToSend.cep) formToSend.cep = formToSend.cep.replace(/\D/g, '');
+        if (formToSend.telefone) formToSend.telefone = formToSend.telefone.replace(/\D/g, '');
 
         if(editandoId) {
             method = 'PUT'; 
@@ -137,7 +186,7 @@ export default function AdminDashboard(){
             const res = await fetch(url, {
                 method: method,
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authState.token}` },
-                body: JSON.stringify(form)
+                body: JSON.stringify(formToSend)
             });
             const data = await res.json();
             
@@ -145,19 +194,17 @@ export default function AdminDashboard(){
                 setResultado(data);
                 
                 if(!editandoId) {
-                    // SE SUCESSO NO CADASTRO: Verifica se o backend mandou a senha temporária
-                    if(data.credenciais.senha_temporaria){
+                    if(data.credenciais && data.credenciais.senha_temporaria){
                         setCredenciaisGeradas({
                             email: form.email,
                             senha: data.credenciais.senha_temporaria
                         });
                     } else {
-                        // Se for produto ou o backend não mandou senha, mostra só alert
                         alert(data.message);
                     }
                     setForm(initialFormState); 
                 } else {
-                    alert(data.message); // Apenas alert se for edição
+                    alert(data.message); 
                 }
 
             } else {
@@ -172,9 +219,11 @@ export default function AdminDashboard(){
 
     return (
         <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f4f6f8' }}>
+            {/* ... (Sidebar Admin) */}
             <SidebarAdmin aoClicar={(novaAba) => { setAba(novaAba); setEditandoId(null); setForm(initialFormState); }} onLogout={logout} />
 
             <div style={{ flex: 1, padding: '40px' }}>
+                {/* ... (Título e botão Cancelar Edição) */}
                 <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom: '30px'}}>
                     <h1 style={{ color: '#333', fontSize: '2rem', margin: 0 }}>
                         {editandoId ? `Editando ${aba.toUpperCase()}` : (aba.includes('lista') ? 'Gerenciar Registros' : `Cadastro de ${aba.charAt(0).toUpperCase() + aba.slice(1)}`)}
@@ -186,7 +235,7 @@ export default function AdminDashboard(){
                     )}
                 </div>
 
-                {/* === NOVO: COMPONENTE DE SUCESSO COM CREDENCIAIS === */}
+                {/* (Componente de credenciais permanece igual) */}
                 {credenciaisGeradas && (
                     <div style={{
                         backgroundColor: '#d4edda', 
@@ -217,7 +266,7 @@ export default function AdminDashboard(){
                     </div>
                 )}
 
-                {/* === TABELA === */}
+                {/* (Tabela permanece igual) */}
                 {aba.startsWith('lista_') ? (
                     <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -249,7 +298,7 @@ export default function AdminDashboard(){
                                         <td style={tdStyle}>
                                             {aba === 'lista_produto' 
                                                 ? `R$ ${parseFloat(item.valor_produto).toFixed(2)}` 
-                                                : `${item.cidade}/${item.estado}`}
+                                                : `${item.cidade || 'N/A'}/${item.estado || 'N/A'}`}
                                         </td>
                                         
                                         <td style={tdStyle}>
@@ -275,24 +324,70 @@ export default function AdminDashboard(){
                             {(aba === 'loja' || aba === 'fornecedor') && (
                                 <>
                                     <div style={{ gridColumn: '1 / -1', fontWeight: 'bold', color: 'var(--cor-primary)', borderBottom: '1px solid #eee', paddingBottom: '5px', marginBottom: '5px' }}>DADOS GERAIS</div>
-                                    <div><label style={labelStyle}>CNPJ</label><input name="cnpj" value={form.cnpj} onChange={(e) => setForm({...form, cnpj: e.target.value})} style={{...inputStyle, background: 'white'}} placeholder="Apenas leitura na edição"/></div>
-                                    <div><label style={labelStyle}>Nome Fantasia</label><input name="nome_fantasia" value={form.nome_fantasia} onChange={(e) => setForm({...form, nome_fantasia: e.target.value})} style={inputStyle}/></div>
-                                    <div><label style={labelStyle}>Razão Social</label><input name="razao_social" value={form.razao_social} onChange={(e) => setForm({...form, razao_social: e.target.value})} style={inputStyle}/></div>
-                                    <div><label style={labelStyle}>Telefone</label><input name="telefone" value={form.telefone} onChange={(e) => setForm({...form, telefone: e.target.value})} style={inputStyle}/></div>
+                                    
+                                    {/* CNPJ - IMaskInput */}
+                                    <div>
+                                        <label style={labelStyle}>CNPJ</label>
+                                        <IMaskInput 
+                                            mask="00.000.000/0000-00"
+                                            name="cnpj" 
+                                            value={form.cnpj} 
+                                            onAccept={(value) => handleMaskChange(value, 'cnpj')} 
+                                            style={{...inputStyle, background: editandoId ? '#f5f5f5' : 'white', cursor: editandoId ? 'not-allowed' : 'text'}} 
+                                            placeholder="00.000.000/0000-00"
+                                            readOnly={editandoId} 
+                                            required
+                                        />
+                                    </div>
+
+                                    <div><label style={labelStyle}>Nome Fantasia</label><input name="nome_fantasia" value={form.nome_fantasia} onChange={handleChange} style={inputStyle} required/></div>
+                                    <div><label style={labelStyle}>Razão Social</label><input name="razao_social" value={form.razao_social} onChange={handleChange} style={inputStyle} required/></div>
+                                    
+                                    {/* TELEFONE - IMaskInput (Máscara Dinâmica) */}
+                                    <div>
+                                        <label style={labelStyle}>Telefone</label>
+                                        <IMaskInput
+                                            mask={[
+                                                { mask: '(00) 0000-0000' }, 
+                                                { mask: '(00) 00000-0000' }
+                                            ]}
+                                            name="telefone" 
+                                            value={form.telefone} 
+                                            onAccept={(value) => handleMaskChange(value, 'telefone')} 
+                                            style={inputStyle}
+                                            placeholder="(00) 00000-0000"
+                                            required
+                                        />
+                                    </div>
                                     
                                     {!editandoId && (
-                                        <div style={{ gridColumn: '1 / -1' }}><label style={labelStyle}>E-mail (Será o Login do sistema)</label><input name="email" value={form.email} onChange={(e) => setForm({...form, email: e.target.value})} style={inputStyle} type="email"/></div>
+                                        <div style={{ gridColumn: '1 / -1' }}><label style={labelStyle}>E-mail (Será o Login do sistema)</label><input name="email" value={form.email} onChange={handleChange} style={inputStyle} type="email" required/></div>
                                     )}
 
                                     <div style={{ gridColumn: '1 / -1', fontWeight: 'bold', color: 'var(--cor-primary)', marginTop: '15px', borderBottom: '1px solid #eee', paddingBottom: '5px', marginBottom: '5px' }}>ENDEREÇO</div>
-                                    <div><label style={labelStyle}>CEP</label><input name="cep" value={form.cep} onChange={(e) => setForm({...form, cep: e.target.value})} style={inputStyle}/></div>
-                                    <div><label style={labelStyle}>Logradouro</label><input name="logradouro" value={form.logradouro} onChange={(e) => setForm({...form, logradouro: e.target.value})} style={inputStyle}/></div>
-                                    <div><label style={labelStyle}>Número</label><input name="numero" value={form.numero} onChange={(e) => setForm({...form, numero: e.target.value})} style={inputStyle}/></div>
-                                    <div><label style={labelStyle}>Bairro</label><input name="bairro" value={form.bairro} onChange={(e) => setForm({...form, bairro: e.target.value})} style={inputStyle}/></div>
-                                    <div><label style={labelStyle}>Cidade</label><input name="cidade" value={form.cidade} onChange={(e) => setForm({...form, cidade: e.target.value})} style={inputStyle}/></div>
+                                    
+                                    {/* CEP - IMaskInput */}
+                                    <div>
+                                        <label style={labelStyle}>CEP</label>
+                                        <IMaskInput 
+                                            mask="00000-000"
+                                            name="cep" 
+                                            value={form.cep} 
+                                            onAccept={(value) => handleMaskChange(value, 'cep')} 
+                                            style={inputStyle}
+                                            placeholder="00000-000"
+                                            required
+                                        />
+                                    </div>
+                                    
+                                    <div><label style={labelStyle}>Logradouro</label><input name="logradouro" value={form.logradouro} onChange={handleChange} style={inputStyle} required/></div>
+                                    <div><label style={labelStyle}>Número</label><input name="numero" value={form.numero} onChange={handleChange} style={inputStyle} required/></div>
+                                    <div><label style={labelStyle}>Bairro</label><input name="bairro" value={form.bairro} onChange={handleChange} style={inputStyle} required/></div>
+                                    <div><label style={labelStyle}>Cidade</label><input name="cidade" value={form.cidade} onChange={handleChange} style={inputStyle} required/></div>
                                     <div>
                                         <label style={labelStyle}>Estado</label>
-                                        <select name="estado" value={form.estado} onChange={(e) => setForm({...form, estado: e.target.value})} style={inputStyle}>
+                                        <select name="estado" value={form.estado} onChange={handleChange} style={inputStyle} required>
+                                            <option value="">Selecione...</option>
                                             {estados.map(uf => <option key={uf} value={uf}>{uf}</option>)}
                                         </select>
                                     </div>
@@ -301,18 +396,18 @@ export default function AdminDashboard(){
 
                             {aba === 'produto' && (
                                 <>
-                                    <div style={{ gridColumn: '1 / -1' }}><label style={labelStyle}>Nome do Produto</label><input name="produto" value={form.produto} onChange={(e) => setForm({...form, produto: e.target.value})} required style={inputStyle}/></div>
-                                    <div><label style={labelStyle}>Valor (R$)</label><input name="valor_produto" type="number" step="0.01" value={form.valor_produto} onChange={(e) => setForm({...form, valor_produto: e.target.value})} required style={inputStyle}/></div>
+                                    <div style={{ gridColumn: '1 / -1' }}><label style={labelStyle}>Nome do Produto</label><input name="produto" value={form.produto} onChange={handleChange} required style={inputStyle}/></div>
+                                    <div><label style={labelStyle}>Valor (R$)</label><input name="valor_produto" type="number" step="0.01" value={form.valor_produto} onChange={handleChange} required style={inputStyle}/></div>
                                     <div>
                                         <label style={labelStyle}>Categoria</label>
-                                        <select name="id_categoria" value={form.id_categoria} onChange={(e) => setForm({...form, id_categoria: e.target.value})} required style={inputStyle}>
+                                        <select name="id_categoria" value={form.id_categoria} onChange={handleChange} required style={inputStyle}>
                                             <option value="">Selecione...</option>
                                             {listaCategorias.map(c => <option key={c.id} value={c.id}>{c.nome_categoria}</option>)}
                                         </select>
                                     </div>
                                     <div style={{ gridColumn: '1 / -1' }}>
                                         <label style={labelStyle}>Fornecedor</label>
-                                        <select name="id_fornecedor" value={form.id_fornecedor} onChange={(e) => setForm({...form, id_fornecedor: e.target.value})} required style={inputStyle}>
+                                        <select name="id_fornecedor" value={form.id_fornecedor} onChange={handleChange} required style={inputStyle}>
                                             <option value="">Selecione...</option>
                                             {listaFornecedores.map(f => <option key={f.id} value={f.id}>{f.nome_fantasia} - {f.cnpj}</option>)}
                                         </select>
@@ -333,19 +428,18 @@ export default function AdminDashboard(){
     );
 }
 
-// === ESTILOS ATUALIZADOS (Mais compactos) ===
+// ... (Estilos permanecem iguais)
 const thStyle = { padding: '10px', color: '#555', borderBottom: '2px solid #eee', fontSize: '0.9rem' };
 const tdStyle = { padding: '10px', color: '#333', fontSize: '0.9rem' };
 
-// Reduzi o padding e ajustei a fonte para ficar menor
 const inputStyle = { 
     width: '100%', 
-    padding: '8px 10px', // Mais compacto (antes era 10px)
+    padding: '8px 10px', 
     borderRadius: '4px', 
     border: '1px solid #ccc',
-    fontSize: '0.9rem', // Fonte um pouco menor
+    fontSize: '0.9rem', 
     outline: 'none',
-    boxSizing: 'border-box' // Garante que o padding não estoure a largura
+    boxSizing: 'border-box' 
 };
 
 const labelStyle = { display: 'block', marginBottom: '4px', fontWeight: '600', fontSize: '0.85rem', color: '#444' };

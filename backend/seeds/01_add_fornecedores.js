@@ -7,7 +7,8 @@ exports.seed = async function(knex){
             tb_loja_cashback, 
             tb_pedido_item, 
             tb_pedido, 
-            tb_fornecedor_produto, 
+            tb_fornecedor_produto,
+            tb_fornecedor_endereco, 
             tb_categoria, 
             tb_loja_endereco, 
             tb_loja, 
@@ -116,8 +117,22 @@ exports.seed = async function(knex){
 
     await knex('tb_loja_endereco').insert([{
         id_loja: idLoja,
-        logradouro: 'Rua Marechal Abacate',
+        logradouro: 'Rua Marechal Jurandir',
+        numero: '1414',
+        bairro: 'Centro',
+        cidade: 'Braço do Norte',
         estado: 'SC',
-        cep: '88750-000'
+        cep: '88820-000'
     }]);
+
+    await knex('tb_fornecedor_endereco').insert([{
+        id_fornecedor: idFornecedor,
+        logradouro: 'Rua Sete de Setembro',
+        numero: '1234',
+        bairro: 'Centro',
+        cidade: 'Criciuma',
+        estado: 'SC',
+        cep: '88820-000',
+        dt_inc: new Date()
+    }])
 }
