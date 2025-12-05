@@ -2,16 +2,21 @@ const bcrypt = require('bcryptjs'); // Chama o bcrypt
 
 exports.seed = async function(knex){
 
-    await knex('tb_pedido_item').del();
-    await knex('tb_pedido').del();
-    await knex('tb_fornecedor_produto').del();
-    await knex('tb_categoria').del();
-    await knex('tb_loja_endereco').del();
-    await knex('tb_loja').del();
-    await knex('tb_fornecedor').del();
-    await knex('tb_sistema_usuario_perfil').del();
-    await knex('tb_sistema_usuario').del();
-    await knex('tb_sistema_conta').del();
+    await knex.raw(`
+        TRUNCATE TABLE 
+            tb_loja_cashback, 
+            tb_pedido_item, 
+            tb_pedido, 
+            tb_fornecedor_produto, 
+            tb_categoria, 
+            tb_loja_endereco, 
+            tb_loja, 
+            tb_fornecedor, 
+            tb_sistema_usuario_perfil, 
+            tb_sistema_usuario, 
+            tb_sistema_conta
+        RESTART IDENTITY CASCADE
+    `);
 
     const [conta] = await knex('tb_sistema_conta').insert([
         {nm_conta: 'Conta Principal'}
@@ -37,9 +42,9 @@ exports.seed = async function(knex){
         {
             id_conta: idConta,
             id_usuario: userFornecedor.id,
-            nome_fantasia: 'Fornecedor Macrovita',
+            nome_fantasia: 'Fornecedor Cimento',
             cnpj: '111111/0001-01',
-            email_fornecedor: 'macrovita@gmail.com'
+            email_fornecedor: 'cimento@gmail.com'
         }
     ]).returning('id');
     const idFornecedor = fornecedor.id;
@@ -49,7 +54,7 @@ exports.seed = async function(knex){
             id_conta: idConta,
             id_usuario: userLoja.id,
             cnpj: '222222/0001-02',
-            nome_fantasia: 'Bar do Janga'
+            nome_fantasia: 'MC Materiais de Construção'
         }
     ]).returning('id');
     const idLoja = loja.id;
@@ -57,7 +62,7 @@ exports.seed = async function(knex){
     const [categoria] = await knex('tb_categoria').insert([
         {
             id_conta: idConta,
-            nome_categoria: 'Bebidas'
+            nome_categoria: 'Matériais Básicos'
         }
     ]).returning('id');
     const idCategoria = categoria.id;

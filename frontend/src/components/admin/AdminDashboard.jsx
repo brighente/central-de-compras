@@ -1,20 +1,22 @@
 import React, { useState, useContext, useEffect } from 'react';
 import AuthContext from '../../context/AuthContext';
 import SidebarAdmin from './SidebarAdmin';
-import { FaTrash, FaEdit, FaTimes } from 'react-icons/fa';
+import { FaTrash, FaEdit, FaTimes, FaCheckCircle, FaCopy } from 'react-icons/fa';
 
 export default function AdminDashboard(){
     const { logout, authState } = useContext(AuthContext);
     
     const [aba, setAba] = useState('loja'); 
-    const [editandoId, setEditandoId] = useState(null); // NULL = Criando novo, ID = Editando
+    const [editandoId, setEditandoId] = useState(null); 
     const [resultado, setResultado] = useState(null);
+    
+    // NOVO: Estado para armazenar as credenciais temporárias logo após o cadastro
+    const [credenciaisGeradas, setCredenciaisGeradas] = useState(null);
     
     const [listaFornecedores, setListaFornecedores] = useState([]);
     const [listaCategorias, setListaCategorias] = useState([]);
     const [dadosTabela, setDadosTabela] = useState([]);
 
-    // Estado inicial do form limpo
     const initialFormState = {
         nome_fantasia: '', razao_social: '', cnpj: '', email: '', telefone: '', 
         logradouro: '', numero: '', bairro: '', cidade: '', estado: 'SC', cep: '', 
@@ -23,18 +25,20 @@ export default function AdminDashboard(){
 
     const [form, setForm] = useState(initialFormState);
 
-    // EFEITOS (Carregar dados)
+    // Limpa credenciais ao mudar de aba
+    useEffect(() => {
+        setCredenciaisGeradas(null);
+    }, [aba]);
+
     useEffect(() => {
         const headers = { 'Authorization': `Bearer ${authState.token}` };
 
         if(aba === 'produto' || aba === 'lista_produto'){
-            // Precisamos dos selects tanto para cadastrar quanto para editar na lista
             fetch('http://localhost:3001/api/admin/lista-fornecedores', { headers }).then(res => res.json()).then(setListaFornecedores);
             fetch('http://localhost:3001/api/admin/lista-categorias', { headers }).then(res => res.json()).then(setListaCategorias);
         }
 
         if(aba.startsWith('lista_')){
-            // Se mudou para lista, limpa o modo edição
             setEditandoId(null);
             setForm(initialFormState);
 
@@ -50,23 +54,18 @@ export default function AdminDashboard(){
         }
     }, [aba, authState.token]);
 
-    // FUNÇÃO: PREPARAR EDIÇÃO
     const handleEdit = (item) => {
         setEditandoId(item.id);
         setResultado(null);
+        setCredenciaisGeradas(null); // Limpa msg de sucesso anterior
 
-        // Preenche o formulário com os dados da linha clicada
-        // O spread operator (...) joga tudo que veio do banco no form. 
-        // Ajustamos campos específicos se o nome no banco for diferente do name do input
         setForm({
             ...item, 
-            // Garante que campos numéricos venham como string para o input não reclamar
             valor_produto: item.valor_produto || '',
             id_categoria: item.id_categoria || '',
             id_fornecedor: item.id_fornecedor || ''
         });
 
-        // Troca a aba para o formulário correspondente
         if(aba === 'lista_loja') setAba('loja');
         if(aba === 'lista_fornecedor') setAba('fornecedor');
         if(aba === 'lista_produto') setAba('produto');
@@ -79,7 +78,21 @@ export default function AdminDashboard(){
     };
 
     const handleDelete = async (id) => {
-        if(!window.confirm("Confirmar exclusão?")) return;
+        const confirmacao1 = window.confirm(
+            "⚠️ PERIGO: Você tem certeza que deseja excluir este registro?\n\n" +
+            "Isso forçará a exclusão de TODOS os dados vinculados.\n\n" +
+            "Essa ação NÃO PODE ser desfeita."
+        );
+
+        if (!confirmacao1) return;
+
+        const confirmacao2 = window.prompt("Para confirmar a exclusão permanente, digite exatamente: confirmar");
+
+        if (confirmacao2 !== 'confirmar') {
+            alert("Ação cancelada. A palavra digitada estava incorreta.");
+            return;
+        }
+
         let tipo = aba === 'lista_loja' ? 'loja' : aba === 'lista_fornecedor' ? 'fornecedor' : 'produto';
 
         try {
@@ -87,30 +100,34 @@ export default function AdminDashboard(){
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${authState.token}` }
             });
+            
+            const data = await res.json();
+
             if(res.ok){
                 setDadosTabela(prev => prev.filter(item => item.id !== id));
-                alert('Excluído com sucesso!');
+                alert('Registro e dependências excluídos com sucesso!');
             } else {
-                alert('Erro ao excluir.');
+                alert('Erro: ' + data.message);
             }
-        } catch(err) { alert('Erro de conexão.'); }
+        } catch(err) { 
+            console.error(err);
+            alert('Erro de conexão.'); 
+        }
     };
 
-    // SUBMIT (CRIAR OU EDITAR)
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setCredenciaisGeradas(null); // Reseta msg anterior
         
         let url = 'http://localhost:3001/api/admin';
         let method = 'POST';
 
-        // Lógica da URL
         if(editandoId) {
-            method = 'PUT'; // Se tem ID, é Edição
+            method = 'PUT'; 
             if(aba === 'loja') url += `/loja/${editandoId}`;
             else if(aba === 'fornecedor') url += `/fornecedor/${editandoId}`;
             else if(aba === 'produto') url += `/produto/${editandoId}`;
         } else {
-            // Se não tem ID, é Criação
             if(aba === 'loja') url += '/loja';
             else if(aba === 'fornecedor') url += '/fornecedor';
             else if(aba === 'produto') url += '/produtos';
@@ -126,11 +143,23 @@ export default function AdminDashboard(){
             
             if(res.ok){
                 setResultado(data);
+                
                 if(!editandoId) {
-                    // Se criou novo, limpa o form. Se editou, mantém para ver as mudanças.
+                    // SE SUCESSO NO CADASTRO: Verifica se o backend mandou a senha temporária
+                    if(data.credenciais.senha_temporaria){
+                        setCredenciaisGeradas({
+                            email: form.email,
+                            senha: data.credenciais.senha_temporaria
+                        });
+                    } else {
+                        // Se for produto ou o backend não mandou senha, mostra só alert
+                        alert(data.message);
+                    }
                     setForm(initialFormState); 
+                } else {
+                    alert(data.message); // Apenas alert se for edição
                 }
-                alert(data.message);
+
             } else {
                 alert('Erro: ' + data.message);
             }
@@ -139,7 +168,6 @@ export default function AdminDashboard(){
         }
     };
 
-    // ... (Mantenha lista de estados e estilos igual antes)
     const estados = [ 'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO' ];
 
     return (
@@ -157,6 +185,37 @@ export default function AdminDashboard(){
                         </button>
                     )}
                 </div>
+
+                {/* === NOVO: COMPONENTE DE SUCESSO COM CREDENCIAIS === */}
+                {credenciaisGeradas && (
+                    <div style={{
+                        backgroundColor: '#d4edda', 
+                        border: '1px solid #c3e6cb', 
+                        borderRadius: '8px', 
+                        padding: '20px', 
+                        marginBottom: '30px', 
+                        color: '#155724',
+                        position: 'relative'
+                    }}>
+                        <div style={{display:'flex', alignItems:'center', gap: '10px', marginBottom: '10px'}}>
+                            <FaCheckCircle size={24} />
+                            <h3 style={{margin:0}}>Cadastro realizado com sucesso!</h3>
+                        </div>
+                        <p style={{margin: '0 0 10px 0'}}>Entregue estas credenciais ao usuário. A senha temporária não poderá ser visualizada novamente.</p>
+                        
+                        <div style={{backgroundColor: 'white', padding: '15px', borderRadius: '6px', border: '1px dashed #28a745', display: 'inline-block', minWidth: '300px'}}>
+                            <div style={{marginBottom: '5px'}}><strong>Login (Email):</strong> <span style={{fontFamily:'monospace', fontSize:'1.1em'}}>{credenciaisGeradas.email}</span></div>
+                            <div><strong>Senha Temporária:</strong> <span style={{fontFamily:'monospace', fontSize:'1.1em', background:'#eee', padding:'2px 5px', borderRadius:'4px'}}>{credenciaisGeradas.senha}</span></div>
+                        </div>
+
+                        <button 
+                            onClick={() => setCredenciaisGeradas(null)} 
+                            style={{position:'absolute', top:'15px', right:'15px', background:'transparent', border:'none', cursor:'pointer', color:'#155724', fontSize:'1.2rem'}}
+                        >
+                            <FaTimes />
+                        </button>
+                    </div>
+                )}
 
                 {/* === TABELA === */}
                 {aba.startsWith('lista_') ? (
@@ -178,7 +237,6 @@ export default function AdminDashboard(){
                                         <td style={tdStyle}>#{item.id}</td>
                                         <td style={tdStyle}>{item.nome_fantasia || item.produto}</td>
                                         
-                                        {/* EXIBE FORNECEDOR SE FOR PRODUTO */}
                                         {aba === 'lista_produto' && <td style={tdStyle}>{item.nome_fornecedor}</td>}
 
                                         {aba !== 'lista_produto' && (
@@ -196,11 +254,9 @@ export default function AdminDashboard(){
                                         
                                         <td style={tdStyle}>
                                             <div style={{display:'flex', gap:'10px'}}>
-                                                {/* BOTÃO EDITAR */}
                                                 <button onClick={() => handleEdit(item)} style={{...btnActionStyle, background: '#ffc107', color: '#333'}} title="Editar">
                                                     <FaEdit />
                                                 </button>
-                                                {/* BOTÃO EXCLUIR */}
                                                 <button onClick={() => handleDelete(item.id)} style={{...btnActionStyle, background: '#dc3545', color: 'white'}} title="Excluir">
                                                     <FaTrash />
                                                 </button>
@@ -213,22 +269,22 @@ export default function AdminDashboard(){
                     </div>
                 ) : (
                     /* === FORMULÁRIO (COMPARTILHADO CADASTRO/EDIÇÃO) === */
-                    <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
-                        <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                    <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+                        <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                             
                             {(aba === 'loja' || aba === 'fornecedor') && (
                                 <>
-                                    <div style={{ gridColumn: '1 / -1', fontWeight: 'bold', color: '#007bff' }}>DADOS GERAIS</div>
-                                    <div><label style={labelStyle}>CNPJ</label><input name="cnpj" value={form.cnpj} onChange={(e) => setForm({...form, cnpj: e.target.value})} disabled={!!editandoId} style={{...inputStyle, background: editandoId ? '#eee' : 'white'}} placeholder="Apenas leitura na edição"/></div>
+                                    <div style={{ gridColumn: '1 / -1', fontWeight: 'bold', color: 'var(--cor-primary)', borderBottom: '1px solid #eee', paddingBottom: '5px', marginBottom: '5px' }}>DADOS GERAIS</div>
+                                    <div><label style={labelStyle}>CNPJ</label><input name="cnpj" value={form.cnpj} onChange={(e) => setForm({...form, cnpj: e.target.value})} style={{...inputStyle, background: 'white'}} placeholder="Apenas leitura na edição"/></div>
                                     <div><label style={labelStyle}>Nome Fantasia</label><input name="nome_fantasia" value={form.nome_fantasia} onChange={(e) => setForm({...form, nome_fantasia: e.target.value})} style={inputStyle}/></div>
                                     <div><label style={labelStyle}>Razão Social</label><input name="razao_social" value={form.razao_social} onChange={(e) => setForm({...form, razao_social: e.target.value})} style={inputStyle}/></div>
                                     <div><label style={labelStyle}>Telefone</label><input name="telefone" value={form.telefone} onChange={(e) => setForm({...form, telefone: e.target.value})} style={inputStyle}/></div>
                                     
                                     {!editandoId && (
-                                        <div style={{ gridColumn: '1 / -1' }}><label style={labelStyle}>E-mail (Login)</label><input name="email" value={form.email} onChange={(e) => setForm({...form, email: e.target.value})} style={inputStyle}/></div>
+                                        <div style={{ gridColumn: '1 / -1' }}><label style={labelStyle}>E-mail (Será o Login do sistema)</label><input name="email" value={form.email} onChange={(e) => setForm({...form, email: e.target.value})} style={inputStyle} type="email"/></div>
                                     )}
 
-                                    <div style={{ gridColumn: '1 / -1', fontWeight: 'bold', color: '#007bff', marginTop: '10px' }}>ENDEREÇO</div>
+                                    <div style={{ gridColumn: '1 / -1', fontWeight: 'bold', color: 'var(--cor-primary)', marginTop: '15px', borderBottom: '1px solid #eee', paddingBottom: '5px', marginBottom: '5px' }}>ENDEREÇO</div>
                                     <div><label style={labelStyle}>CEP</label><input name="cep" value={form.cep} onChange={(e) => setForm({...form, cep: e.target.value})} style={inputStyle}/></div>
                                     <div><label style={labelStyle}>Logradouro</label><input name="logradouro" value={form.logradouro} onChange={(e) => setForm({...form, logradouro: e.target.value})} style={inputStyle}/></div>
                                     <div><label style={labelStyle}>Número</label><input name="numero" value={form.numero} onChange={(e) => setForm({...form, numero: e.target.value})} style={inputStyle}/></div>
@@ -264,8 +320,8 @@ export default function AdminDashboard(){
                                 </>
                             )}
 
-                            <div style={{ gridColumn: '1 / -1', marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                                <button type="submit" style={{ background: editandoId ? '#ffc107' : '#28a745', color: editandoId ? '#333' : 'white', border: 'none', padding: '15px 30px', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer' }}>
+                            <div style={{ gridColumn: '1 / -1', marginTop: '10px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                                <button type="submit" style={{ background: editandoId ? '#ffc107' : '#28a745', color: editandoId ? '#333' : 'white', border: 'none', padding: '12px 25px', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.9rem' }}>
                                     {editandoId ? 'SALVAR ALTERAÇÕES' : 'CADASTRAR NOVO'}
                                 </button>
                             </div>
@@ -277,8 +333,20 @@ export default function AdminDashboard(){
     );
 }
 
-const thStyle = { padding: '12px', color: '#555', borderBottom: '2px solid #eee' };
-const tdStyle = { padding: '12px', color: '#333' };
-const inputStyle = { width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ccc' };
-const labelStyle = { display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '0.9rem', color: '#555' };
-const btnActionStyle = { border: 'none', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' };
+// === ESTILOS ATUALIZADOS (Mais compactos) ===
+const thStyle = { padding: '10px', color: '#555', borderBottom: '2px solid #eee', fontSize: '0.9rem' };
+const tdStyle = { padding: '10px', color: '#333', fontSize: '0.9rem' };
+
+// Reduzi o padding e ajustei a fonte para ficar menor
+const inputStyle = { 
+    width: '100%', 
+    padding: '8px 10px', // Mais compacto (antes era 10px)
+    borderRadius: '4px', 
+    border: '1px solid #ccc',
+    fontSize: '0.9rem', // Fonte um pouco menor
+    outline: 'none',
+    boxSizing: 'border-box' // Garante que o padding não estoure a largura
+};
+
+const labelStyle = { display: 'block', marginBottom: '4px', fontWeight: '600', fontSize: '0.85rem', color: '#444' };
+const btnActionStyle = { border: 'none', padding: '6px 10px', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' };

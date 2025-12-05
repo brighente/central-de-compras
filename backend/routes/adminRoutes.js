@@ -328,58 +328,118 @@ router.put('/produto/:id', async (req, res) => {
 module.exports = router;
 
 // =========================================
-// ROTAS DE EXCLUSÃO (DELETE)
+// ROTAS DE EXCLUSÃO (DELETE) - CORRIGIDO
 // =========================================
 
 router.delete('/loja/:id', async (req, res) => {
     const { id } = req.params;
-    const trx = await db.transaction(); // Transação para apagar tudo (Endereço, User, Loja)
-    try {
-        const loja = await trx('tb_loja').where({ id }).first();
-        if(!loja) throw new Error('Loja não encontrada');
+    
+    await db.transaction(async (trx) => {
+        try {
+            // 1. Busca a loja e salva o ID do usuário para usar no final
+            const loja = await trx('tb_loja').where({ id }).first();
+            if(!loja) throw new Error('Loja não encontrada');
+            
+            const idUsuario = loja.id_usuario; // Salva numa variável segura
 
-        await trx('tb_loja_endereco').where({ id_loja: id }).del();
-        await trx('tb_loja').where({ id }).del();
-        await trx('tb_sistema_usuario').where({ id: loja.id_usuario }).del(); // Opcional: Apagar o usuário de login também
-        
-        await trx.commit();
-        res.json({ message: 'Loja excluída com sucesso!' });
-    } catch (err) {
-        await trx.rollback();
-        res.status(500).json({ message: 'Erro ao excluir loja: ' + err.message });
-    }
+            // 2. Limpa dados vinculados à Loja (Pedidos, Itens, Endereço, Cashback)
+            const pedidos = await trx('tb_pedido').where({ id_loja: id }).select('id');
+            const idsPedidos = pedidos.map(p => p.id);
+
+            if(idsPedidos.length > 0){
+                await trx('tb_pedido_item').whereIn('id_pedido', idsPedidos).del();
+                await trx('tb_pedido').whereIn('id', idsPedidos).del();
+            }
+
+            await trx('tb_loja_endereco').where({ id_loja: id }).del();
+            // await trx('tb_loja_cashback').where({ id_loja: id }).del(); // Descomente se existir
+
+            // 3. Apaga a Loja (Isso libera a trava do Usuário na tabela de Loja)
+            await trx('tb_loja').where({ id }).del();
+
+            // 4. Agora apaga o Usuário e seus Perfis
+            if (idUsuario) {
+                // PRIMEIRO: Apaga os perfis vinculados a esse usuário
+                await trx('tb_sistema_usuario_perfil').where({ id_usuario: idUsuario }).del();
+                
+                // SEGUNDO: Apaga o usuário
+                await trx('tb_sistema_usuario').where({ id: idUsuario }).del();
+            }
+
+            res.json({ message: 'Loja e dados vinculados excluídos com sucesso.' });
+
+        } catch (err) {
+            console.error("Erro ao excluir loja:", err);
+            // O rollback é automático em caso de erro
+            res.status(500).json({ message: 'Erro ao excluir loja: ' + err.message });
+        }
+    });
 });
 
 router.delete('/fornecedor/:id', async (req, res) => {
     const { id } = req.params;
-    const trx = await db.transaction();
-    try {
-        const fornecedor = await trx('tb_fornecedor').where({ id }).first();
-        if(!fornecedor) throw new Error('Fornecedor não encontrado');
 
-        await trx('tb_fornecedor_endereco').where({ id_fornecedor: id }).del();
-        // Nota: Produtos e Regras tem FK. Idealmente deletar eles antes ou usar CASCADE no banco.
-        // Aqui vou tentar deletar o fornecedor, se tiver produto vai dar erro de FK (proteção do banco).
-        await trx('tb_fornecedor').where({ id }).del();
-        await trx('tb_sistema_usuario').where({ id: fornecedor.id_usuario }).del();
+    await db.transaction(async (trx) => {
+        try {
+            // 1. Busca fornecedor e guarda ID do usuário
+            const fornecedor = await trx('tb_fornecedor').where({ id }).first();
+            if(!fornecedor) throw new Error('Fornecedor não encontrado');
 
-        await trx.commit();
-        res.json({ message: 'Fornecedor excluído com sucesso!' });
-    } catch (err) {
-        await trx.rollback();
-        res.status(400).json({ message: 'Erro! Talvez este fornecedor tenha produtos/pedidos vinculados.' });
-    }
+            const idUsuario = fornecedor.id_usuario; // Salva numa variável segura
+
+            // 2. Limpa produtos e vínculos em pedidos
+            const produtos = await trx('tb_fornecedor_produto').where({ id_fornecedor: id }).select('id');
+            const idsProdutos = produtos.map(p => p.id);
+
+            if(idsProdutos.length > 0){
+                await trx('tb_pedido_item').whereIn('id_produto', idsProdutos).del();
+                await trx('tb_fornecedor_produto').whereIn('id', idsProdutos).del();
+            }
+
+            // 3. Limpa dados do Fornecedor
+            await trx('tb_fornecedor_endereco').where({ id_fornecedor: id }).del();
+            await trx('tb_fornecedor_campanha').where({ id_fornecedor: id }).del();
+            await trx('tb_fornecedor_condicao_estado').where({ id_fornecedor: id }).del();
+            await trx('tb_fornecedor_condicao_pagamento').where({ id_fornecedor: id }).del();
+
+            // 4. Apaga o Fornecedor (Libera a trava do usuário)
+            await trx('tb_fornecedor').where({ id }).del();
+
+            // 5. Apaga Usuário e Perfil
+            if (idUsuario) {
+                // PRIMEIRO: Perfis
+                await trx('tb_sistema_usuario_perfil').where({ id_usuario: idUsuario }).del();
+                
+                // SEGUNDO: Usuário
+                await trx('tb_sistema_usuario').where({ id: idUsuario }).del();
+            }
+
+            res.json({ message: 'Fornecedor excluído com sucesso.' });
+
+        } catch (err) {
+            console.error("Erro ao excluir fornecedor:", err);
+            res.status(500).json({ message: 'Erro ao excluir fornecedor: ' + err.message });
+        }
+    });
 });
 
 router.delete('/produto/:id', async (req, res) => {
-    try {
-        await db('tb_fornecedor_produto').where({ id: req.params.id }).del();
-        res.json({ message: 'Produto excluído!' });
-    } catch (err) {
-        res.status(400).json({ message: 'Erro ao excluir (possui vendas vinculadas?)' });
-    }
-});
+    const { id } = req.params;
+    
+    await db.transaction(async (trx) => {
+        try {
+            // 1. Remove este produto de qualquer pedido existente (limpeza forçada)
+            await trx('tb_pedido_item').where({ id_produto: id }).del();
 
-module.exports = router;
+            // 2. Remove o produto
+            await trx('tb_fornecedor_produto').where({ id }).del();
+
+            res.json({ message: 'Produto excluído com sucesso!' });
+        } catch (err) {
+            console.error(err);
+            res.status(500).json({ message: 'Erro ao excluir produto.' });
+        }
+    });
+});
 
 module.exports = router;
