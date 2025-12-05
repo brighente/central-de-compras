@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import AuthContext from '../../context/AuthContext';
-import { FaMapMarkedAlt, FaMoneyCheckAlt, FaTrash, FaPlus, FaSave, FaInfoCircle } from 'react-icons/fa';
+import { FaMapMarkedAlt, FaMoneyCheckAlt, FaTrash, FaPlus, FaSave, FaEdit } from 'react-icons/fa';
 
 export default function FornecedorConfiguracoes() {
     const { authState } = useContext(AuthContext);
@@ -9,7 +9,7 @@ export default function FornecedorConfiguracoes() {
     const [regrasEstados, setRegrasEstados] = useState([]);
     const [formasPagamento, setFormasPagamento] = useState([]);
 
-    // Estado para Regras de Estado
+    // Estado para Nova Regra
     const [formEstado, setFormEstado] = useState({
         estado: 'SC',
         valor_cashback_percentual: '',
@@ -17,6 +17,8 @@ export default function FornecedorConfiguracoes() {
         acrescimo_desconto_unitario_valor: ''
     });
 
+    // Estado para Edição de Regra (Modal)
+    const [editandoRegra, setEditandoRegra] = useState(null);
 
     const OPCOES_PAGAMENTO = [
         "Boleto Bancário (À vista)",
@@ -29,8 +31,8 @@ export default function FornecedorConfiguracoes() {
         "OUTRO"
     ];
 
-    const [pagamentoSelecionado, setPagamentoSelecionado] = useState(""); // Guarda o valor do Select
-    const [textoPersonalizado, setTextoPersonalizado] = useState("");     // Guarda o texto se for OUTRO
+    const [pagamentoSelecionado, setPagamentoSelecionado] = useState(""); 
+    const [textoPersonalizado, setTextoPersonalizado] = useState("");     
 
     const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authState.token}` };
 
@@ -56,7 +58,7 @@ export default function FornecedorConfiguracoes() {
             .catch(console.error);
     };
 
-    // --- HANDLERS (Regras mantidas iguais) ---
+    // --- HANDLERS REGRAS (CRIAR E EXCLUIR) ---
     const handleSalvarRegra = async (e) => {
         e.preventDefault();
         const payload = {
@@ -86,15 +88,51 @@ export default function FornecedorConfiguracoes() {
         carregarRegras();
     };
 
-    // --- NOVO HANDLER DE PAGAMENTO ---
+    // --- HANDLERS EDIÇÃO (NOVO) ---
+    const abrirEdicaoRegra = (regra) => {
+        setEditandoRegra({
+            id: regra.id,
+            estado: regra.estado, // Apenas visual, geralmente não se edita a chave (estado) no update, mas útil mostrar
+            valor_cashback_percentual: regra.valor_cashback_percentual,
+            prazo_pagamento_dias: regra.prazo_pagamento_dias,
+            acrescimo_desconto_unitario_valor: regra.acrescimo_desconto_unitario_valor
+        });
+    };
+
+    const salvarEdicaoRegra = async () => {
+        if (!editandoRegra) return;
+
+        try {
+            const res = await fetch(`http://localhost:3001/api/condicoes/${editandoRegra.id}`, {
+                method: 'PUT',
+                headers,
+                body: JSON.stringify({
+                    valor_cashback_percentual: editandoRegra.valor_cashback_percentual || 0,
+                    prazo_pagamento_dias: editandoRegra.prazo_pagamento_dias || 0,
+                    acrescimo_desconto_unitario_valor: editandoRegra.acrescimo_desconto_unitario_valor || 0
+                })
+            });
+
+            if (res.ok) {
+                alert('Regra atualizada!');
+                setEditandoRegra(null);
+                carregarRegras();
+            } else {
+                const err = await res.json();
+                alert('Erro ao atualizar: ' + (err.message || 'Erro desconhecido'));
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Erro de conexão.');
+        }
+    };
+
+    // --- HANDLERS PAGAMENTO ---
     const handleSalvarPagamento = async (e) => {
         e.preventDefault();
-        
-        // Lógica: Se for OUTRO, usa o texto personalizado. Se não, usa o valor do select.
         let descricaoFinal = "";
-
         if (pagamentoSelecionado === "OUTRO") {
-            if (!textoPersonalizado.trim()) return alert("Por favor, digite a descrição da forma de pagamento.");
+            if (!textoPersonalizado.trim()) return alert("Por favor, digite a descrição.");
             descricaoFinal = textoPersonalizado;
         } else {
             if (!pagamentoSelecionado) return alert("Selecione uma forma de pagamento.");
@@ -102,13 +140,9 @@ export default function FornecedorConfiguracoes() {
         }
 
         try {
-            // Enviamos para o backend como 'descricao', mantendo compatibilidade com o banco
             const res = await fetch('http://localhost:3001/api/condicoes/pagamento', {
-                method: 'POST', 
-                headers, 
-                body: JSON.stringify({ descricao: descricaoFinal })
+                method: 'POST', headers, body: JSON.stringify({ descricao: descricaoFinal })
             });
-            
             if(res.ok){
                 setPagamentoSelecionado("");
                 setTextoPersonalizado("");
@@ -137,7 +171,6 @@ export default function FornecedorConfiguracoes() {
         inputGroup: { display: 'flex', flexDirection: 'column', gap: '8px' },
         label: { fontSize: '0.9rem', color: '#666', fontWeight: '600' },
         input: { padding: '12px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '1rem', outlineColor: '#009933' },
-        helper: { fontSize: '0.75rem', color: '#888', marginTop: '4px' },
         btnAdd: { marginTop: '20px', background: '#009933', color: 'white', border: 'none', padding: '12px 25px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' },
         table: { width: '100%', borderCollapse: 'collapse', marginTop: '20px' },
         th: { textAlign: 'left', padding: '15px', background: '#f8f9fa', color: '#555', borderBottom: '2px solid #ddd', fontSize: '0.9rem' },
@@ -148,9 +181,11 @@ export default function FornecedorConfiguracoes() {
         <div style={styles.container}>
             <h2 style={styles.header}>Configurações de Venda</h2>
 
-            {/* PARTE 1: REGRAS REGIONAIS (Mantido Igual) */}
+            {/* PARTE 1: REGRAS REGIONAIS */}
             <div style={styles.section}>
                 <h3 style={styles.sectionTitle}><FaMapMarkedAlt color="#009933"/> Regras Regionais (Logística & Impostos)</h3>
+                
+                {/* Form Adicionar */}
                 <form onSubmit={handleSalvarRegra}>
                     <div style={styles.formGrid}>
                         <div style={styles.inputGroup}>
@@ -174,9 +209,9 @@ export default function FornecedorConfiguracoes() {
                     </div>
                     <button type="submit" style={styles.btnAdd}><FaPlus /> ADICIONAR REGRA</button>
                 </form>
-                {/* Tabela de regras omitida para brevidade (já estava pronta no código anterior) */}
+
+                {/* Tabela de Regras */}
                 <div style={{marginTop: '30px'}}>
-                     {/* ... (código da tabela igual ao anterior) ... */}
                      {regrasEstados.length > 0 && (
                         <table style={styles.table}>
                             <thead>
@@ -186,10 +221,19 @@ export default function FornecedorConfiguracoes() {
                                 {regrasEstados.map(r => (
                                     <tr key={r.id}>
                                         <td style={styles.td}>{r.estado}</td>
-                                        <td style={styles.td}>R$ {parseFloat(r.acrescimo_desconto_unitario_valor).toFixed(2)}</td>
+                                        <td style={styles.td}>R$ {parseFloat(r.acrescimo_desconto_unitario_valor || 0).toFixed(2)}</td>
                                         <td style={styles.td}>{r.valor_cashback_percentual}%</td>
                                         <td style={styles.td}>{r.prazo_pagamento_dias} dias</td>
-                                        <td style={styles.td}><button onClick={() => handleExcluirRegra(r.id)} style={{color:'#dc3545', background:'none', border:'none', cursor:'pointer'}}><FaTrash /></button></td>
+                                        <td style={styles.td}>
+                                            <div style={{display:'flex', gap:'10px'}}>
+                                                <button onClick={() => abrirEdicaoRegra(r)} style={{color:'#007bff', background:'none', border:'none', cursor:'pointer'}} title="Editar">
+                                                    <FaEdit size={16} />
+                                                </button>
+                                                <button onClick={() => handleExcluirRegra(r.id)} style={{color:'#dc3545', background:'none', border:'none', cursor:'pointer'}} title="Excluir">
+                                                    <FaTrash size={16} />
+                                                </button>
+                                            </div>
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -198,64 +242,34 @@ export default function FornecedorConfiguracoes() {
                 </div>
             </div>
 
-            {/* PARTE 2: FORMAS DE PAGAMENTO (ATUALIZADA) */}
+            {/* PARTE 2: FORMAS DE PAGAMENTO */}
             <div style={styles.section}>
                 <h3 style={styles.sectionTitle}><FaMoneyCheckAlt color="#009933"/> Formas de Pagamento</h3>
-                
                 <div style={{display: 'flex', flexWrap: 'wrap', gap: '30px'}}>
-                    {/* Formulário de Pagamento */}
                     <div style={{flex: 1, minWidth: '300px'}}>
                         <form onSubmit={handleSalvarPagamento} style={{display: 'flex', flexDirection: 'column', gap: '15px'}}>
-                            
-                            {/* SELECT DE OPÇÕES PADRÃO */}
                             <div style={styles.inputGroup}>
                                 <label style={styles.label}>Tipo de Pagamento</label>
-                                <select 
-                                    style={styles.input} 
-                                    value={pagamentoSelecionado} 
-                                    onChange={(e) => setPagamentoSelecionado(e.target.value)}
-                                    required
-                                >
+                                <select style={styles.input} value={pagamentoSelecionado} onChange={(e) => setPagamentoSelecionado(e.target.value)} required>
                                     <option value="">Selecione uma opção...</option>
-                                    {OPCOES_PAGAMENTO.map(op => (
-                                        <option key={op} value={op}>{op}</option>
-                                    ))}
+                                    {OPCOES_PAGAMENTO.map(op => <option key={op} value={op}>{op}</option>)}
                                 </select>
                             </div>
-
-                            {/* INPUT CONDICIONAL: SÓ APARECE SE FOR 'OUTRO' */}
                             {pagamentoSelecionado === 'OUTRO' && (
                                 <div style={styles.inputGroup}>
                                     <label style={styles.label}>Descreva a condição personalizada:</label>
-                                    <input 
-                                        style={styles.input} 
-                                        value={textoPersonalizado} 
-                                        onChange={e => setTextoPersonalizado(e.target.value)} 
-                                        placeholder="Ex: Boleto 30/60/90 com entrada" 
-                                        autoFocus
-                                    />
+                                    <input style={styles.input} value={textoPersonalizado} onChange={e => setTextoPersonalizado(e.target.value)} placeholder="Ex: Boleto 30/60/90 com entrada" autoFocus />
                                 </div>
                             )}
-
-                            <button type="submit" style={{...styles.btnAdd, alignSelf: 'start'}}>
-                                <FaSave /> SALVAR CONDIÇÃO
-                            </button>
+                            <button type="submit" style={{...styles.btnAdd, alignSelf: 'start'}}><FaSave /> SALVAR CONDIÇÃO</button>
                         </form>
                     </div>
-
-                    {/* Lista de Pagamentos Cadastrados */}
                     <div style={{flex: 1, minWidth: '300px'}}>
                         <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
                             {formasPagamento.map(fp => (
-                                <li key={fp.id} style={{
-                                    background: '#fff', border: '1px solid #eee', padding: '12px 15px', 
-                                    marginBottom: '8px', borderRadius: '6px', display: 'flex', 
-                                    justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
-                                }}>
+                                <li key={fp.id} style={{background: '#fff', border: '1px solid #eee', padding: '12px 15px', marginBottom: '8px', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.02)'}}>
                                     <span style={{color: '#333', fontWeight: '500'}}>{fp.descricao}</span>
-                                    <button onClick={() => handleExcluirPagamento(fp.id)} style={{color:'#dc3545', background:'none', border:'none', cursor:'pointer'}}>
-                                        <FaTrash />
-                                    </button>
+                                    <button onClick={() => handleExcluirPagamento(fp.id)} style={{color:'#dc3545', background:'none', border:'none', cursor:'pointer'}}><FaTrash /></button>
                                 </li>
                             ))}
                             {formasPagamento.length === 0 && <li style={{color:'#999', textAlign:'center'}}>Nenhuma forma cadastrada.</li>}
@@ -263,6 +277,39 @@ export default function FornecedorConfiguracoes() {
                     </div>
                 </div>
             </div>
+
+            {/* --- MODAL DE EDIÇÃO (REGRAS) --- */}
+            {editandoRegra && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000,
+                    display: 'flex', justifyContent: 'center', alignItems: 'center'
+                }}>
+                    <div style={{ background: 'white', padding: '30px', borderRadius: '10px', width: '400px', boxShadow: '0 5px 15px rgba(0,0,0,0.3)' }}>
+                        <h3 style={{marginTop:0, marginBottom:'20px', color:'#333'}}>Editar Regra: {editandoRegra.estado}</h3>
+                        
+                        <div style={styles.inputGroup}>
+                            <label style={styles.label}>Ajuste de Preço (R$)</label>
+                            <input type="number" step="0.01" style={styles.input} value={editandoRegra.acrescimo_desconto_unitario_valor} onChange={e => setEditandoRegra({...editandoRegra, acrescimo_desconto_unitario_valor: e.target.value})} />
+                        </div>
+                        <br/>
+                        <div style={styles.inputGroup}>
+                            <label style={styles.label}>Cashback (%)</label>
+                            <input type="number" step="0.1" style={styles.input} value={editandoRegra.valor_cashback_percentual} onChange={e => setEditandoRegra({...editandoRegra, valor_cashback_percentual: e.target.value})} />
+                        </div>
+                        <br/>
+                        <div style={styles.inputGroup}>
+                            <label style={styles.label}>Prazo Pagamento (Dias)</label>
+                            <input type="number" style={styles.input} value={editandoRegra.prazo_pagamento_dias} onChange={e => setEditandoRegra({...editandoRegra, prazo_pagamento_dias: e.target.value})} />
+                        </div>
+
+                        <div style={{display:'flex', gap:'10px', marginTop:'25px'}}>
+                            <button onClick={salvarEdicaoRegra} style={{flex:1, padding:'10px', background:'#28a745', color:'white', border:'none', borderRadius:'5px', cursor:'pointer', fontWeight:'bold'}}>SALVAR</button>
+                            <button onClick={() => setEditandoRegra(null)} style={{flex:1, padding:'10px', background:'#6c757d', color:'white', border:'none', borderRadius:'5px', cursor:'pointer', fontWeight:'bold'}}>CANCELAR</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

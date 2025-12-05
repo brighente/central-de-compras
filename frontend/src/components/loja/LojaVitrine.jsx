@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { FaSearch, FaThLarge, FaList, FaCartPlus, FaImage } from 'react-icons/fa';
+import { FaSearch, FaThLarge, FaList, FaCartPlus, FaImage, FaInfoCircle } from 'react-icons/fa';
 import AuthContext from '../../context/AuthContext';
 import CartContext from '../../context/CartContext';
 
@@ -10,7 +10,7 @@ export default function LojaVitrine() {
     const [produtos, setProdutos] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [viewMode, setViewMode] = useState('grid'); // 'grid' ou 'list'
+    const [viewMode, setViewMode] = useState('grid');
 
     useEffect(() => {
         const fetchVitrine = async () => {
@@ -18,7 +18,10 @@ export default function LojaVitrine() {
                 const res = await fetch('http://localhost:3001/api/vitrine', {
                     headers: { 'Authorization': `Bearer ${authState.token}` }
                 });
-                if(res.ok) setProdutos(await res.json());
+                if(res.ok) {
+                    const data = await res.json();
+                    setProdutos(data);
+                }
             } catch(err) { console.error(err); } 
             finally { setLoading(false); }
         };
@@ -27,8 +30,22 @@ export default function LojaVitrine() {
 
     const produtosFiltrados = produtos.filter(p => 
         p.produto.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        p.fornecedor_nome.toLowerCase().includes(searchTerm.toLowerCase())
+        (p.fornecedor_nome && p.fornecedor_nome.toLowerCase().includes(searchTerm.toLowerCase()))
     );
+
+    // Função auxiliar para lidar com a adição ao carrinho com o preço correto
+    const handleAddToCart = (prod) => {
+    // Se o backend calculou um valor_final, usamos ele. Senão, usamos o valor cru.
+    const precoEfetivo = prod.valor_final !== undefined ? prod.valor_final : prod.valor_produto;
+    
+    const produtoParaCarrinho = {
+        ...prod,
+        valor_produto: precoEfetivo, // O carrinho vai ler este valor como o preço oficial
+        valor_original_db: prod.valor_produto // Guardamos o original só por segurança
+    };
+    
+    addToCart(produtoParaCarrinho);
+};
 
     // --- ESTILOS ---
     const styles = {
@@ -62,9 +79,36 @@ export default function LojaVitrine() {
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
             boxShadow: '0 4px 6px rgba(0,153,51,0.2)'
         },
-        price: { fontSize: '1.4rem', fontWeight: '800', color: '#333' }
+        priceContainer: { display: 'flex', flexDirection: 'column', alignItems: 'flex-start' },
+        price: { fontSize: '1.4rem', fontWeight: '800', color: '#333' },
+        priceOrigin: { fontSize: '0.8rem', color: '#999', textDecoration: 'line-through', marginBottom: '2px' },
+        regionalInfo: { fontSize: '0.75rem', color: '#d35400', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }
     };
 
+    // Componente auxiliar para exibir preço (evita repetição)
+    const PriceDisplay = ({ prod }) => {
+    const precoFinal = prod.valor_final !== undefined ? parseFloat(prod.valor_final) : parseFloat(prod.valor_produto);
+    const precoOriginal = parseFloat(prod.valor_produto);
+    
+    // Verifica se houve alteração (evita erros de arredondamento com epsilon pequeno ou toFixed)
+    const teveAjuste = Math.abs(precoFinal - precoOriginal) > 0.01;
+
+    return (
+        <div style={styles.priceContainer}>
+            {teveAjuste && (
+                <span style={styles.priceOrigin}>De: R$ {precoOriginal.toFixed(2)}</span>
+            )}
+            <div style={{...styles.price, color: teveAjuste ? '#d35400' : '#333'}}>
+                R$ {precoFinal.toFixed(2)}
+            </div>
+            {teveAjuste && (
+                <div style={styles.regionalInfo} title={`Preço ajustado para ${prod.uf_usuario}`}>
+                    <FaInfoCircle /> Regra de {prod.uf_usuario} aplicada
+                </div>
+            )}
+        </div>
+    );
+};
     return (
         <div>
             {/* Header com Busca e Toggle */}
@@ -89,7 +133,6 @@ export default function LojaVitrine() {
                         <div style={styles.gridContainer}>
                             {produtosFiltrados.map(prod => (
                                 <div key={prod.id} style={styles.card}>
-                                    {/* Placeholder Imagem */}
                                     <div style={styles.imgPlaceholder}>
                                         <FaImage size={40}/>
                                     </div>
@@ -100,8 +143,8 @@ export default function LojaVitrine() {
                                             <p style={{fontSize: '0.85rem', color: '#777', margin: '0 0 15px 0'}}>Por: {prod.fornecedor_nome}</p>
                                         </div>
                                         <div>
-                                            <div style={styles.price}>R$ {parseFloat(prod.valor_produto).toFixed(2)}</div>
-                                            <button style={styles.btnBuy} onClick={() => addToCart(prod)}>
+                                            <PriceDisplay prod={prod} />
+                                            <button style={styles.btnBuy} onClick={() => handleAddToCart(prod)}>
                                                 <FaCartPlus /> ADICIONAR
                                             </button>
                                         </div>
@@ -123,8 +166,10 @@ export default function LojaVitrine() {
                                         <p style={{fontSize: '0.8rem', color: '#777', margin: '4px 0 0 0'}}>Fornecedor: {prod.fornecedor_nome}</p>
                                     </div>
                                     <div style={{textAlign: 'right', minWidth: '140px'}}>
-                                        <div style={styles.price}>R$ {parseFloat(prod.valor_produto).toFixed(2)}</div>
-                                        <button style={{...styles.btnBuy, marginTop: '10px', padding: '8px 15px', fontSize: '0.9rem'}} onClick={() => addToCart(prod)}>
+                                        <div style={{display:'flex', justifyContent:'flex-end'}}>
+                                            <PriceDisplay prod={prod} />
+                                        </div>
+                                        <button style={{...styles.btnBuy, marginTop: '10px', padding: '8px 15px', fontSize: '0.9rem'}} onClick={() => handleAddToCart(prod)}>
                                             <FaCartPlus /> ADICIONAR
                                         </button>
                                     </div>

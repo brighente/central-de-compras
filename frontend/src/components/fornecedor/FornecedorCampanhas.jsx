@@ -1,21 +1,25 @@
 import React, { useState, useEffect, useContext } from 'react';
 import AuthContext from '../../context/AuthContext';
-import { FaBullhorn, FaTrash, FaPercentage, FaClock } from 'react-icons/fa';
+import { FaBullhorn, FaTrash, FaPercentage, FaClock, FaEdit } from 'react-icons/fa';
 
 export default function FornecedorCampanhas() {
     const { authState } = useContext(AuthContext);
     const [campanhas, setCampanhas] = useState([]);
     
-    // Adicionado campo 'dias_duracao'
+    // Estado para controlar o modal de edição
+    const [editando, setEditando] = useState(null);
+
+    // Estado do formulário de criação (Nova Campanha)
     const [form, setForm] = useState({ 
         descricao: '', 
         tipo_regra: 'VALOR', 
         gatilho: '',         
         desconto_percentual: '',
-        dias_duracao: 7 // Valor padrão sugerido
+        dias_duracao: 7 
     });
 
     const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authState.token}` };
+    const inputStyle = { width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc', marginBottom: '10px' };
 
     useEffect(() => {
         if(authState.token) fetchCampanhas();
@@ -24,10 +28,14 @@ export default function FornecedorCampanhas() {
     const fetchCampanhas = () => {
         fetch('http://localhost:3001/api/campanhas/fornecedor', { headers })
             .then(r => r.json())
-            .then(setCampanhas)
+            .then(data => {
+                // Garante que seja um array para não quebrar o map
+                setCampanhas(Array.isArray(data) ? data : []);
+            })
             .catch(console.error);
     };
 
+    // --- CRIAR ---
     const handleSalvar = async (e) => {
         e.preventDefault();
         try {
@@ -44,17 +52,58 @@ export default function FornecedorCampanhas() {
         } catch(err) { alert('Erro ao salvar'); }
     };
 
+    // --- PREPARAR EDIÇÃO ---
+    const abrirEdicao = (campanha) => {
+        // Preenche o estado de edição. 
+        // OBS: As verificações (||) garantem que funcione mesmo se o GET retornar nomes do SQL (ex: valor_meta em vez de gatilho)
+        setEditando({
+            id: campanha.id,
+            descricao: campanha.descricao || campanha.descricao_campanha,
+            tipo_regra: campanha.tipo_regra,
+            // Se gatilho vier nulo do banco, tenta pegar do valor_meta ou quantidade_meta
+            gatilho: campanha.gatilho || campanha.valor_meta || campanha.quantidade_meta || '', 
+            desconto_percentual: campanha.desconto_percentual || campanha.percentual_desconto,
+            dias_duracao: campanha.dias_duracao || campanha.tempo_duracao_campanha
+        });
+    };
+
+    // --- SALVAR EDIÇÃO (PUT) ---
+    const salvarEdicao = async () => {
+        if (!editando) return;
+
+        try {
+            // O corpo envia exatamente o que sua rota backend espera:
+            // { descricao, tipo_regra, gatilho, desconto_percentual, dias_duracao }
+            const res = await fetch(`http://localhost:3001/api/campanhas/${editando.id}`, {
+                method: 'PUT',
+                headers,
+                body: JSON.stringify(editando) 
+            });
+
+            if (res.ok) {
+                alert('Campanha atualizada!');
+                setEditando(null); // Fecha o modal
+                fetchCampanhas();  // Atualiza a lista
+            } else {
+                const err = await res.json();
+                alert('Erro ao atualizar: ' + (err.message || 'Erro desconhecido'));
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Erro de conexão ao atualizar.');
+        }
+    };
+
+    // --- EXCLUIR ---
     const handleExcluir = async (id) => {
         if(!confirm('Remover campanha?')) return;
         await fetch(`http://localhost:3001/api/campanhas/${id}`, { method: 'DELETE', headers });
         fetchCampanhas();
     };
 
-    const inputStyle = { width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc', marginBottom: '10px' };
-
     return (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '30px' }}>
-            {/* Form */}
+            {/* Form Criação */}
             <div style={{ background: 'white', padding: '25px', borderRadius: '10px', boxShadow: '0 2px 5px rgba(0,0,0,0.05)', height: 'fit-content' }}>
                 <h3 style={{marginTop:0, color:'#009933', display:'flex', alignItems:'center', gap:'10px'}}>
                     <FaBullhorn /> Nova Campanha
@@ -74,7 +123,7 @@ export default function FornecedorCampanhas() {
                         </label>
                         <label style={{cursor:'pointer', display:'flex', alignItems:'center', gap:'5px'}}>
                             <input type="radio" name="tipo" checked={form.tipo_regra === 'QUANTIDADE'} onChange={() => setForm({...form, tipo_regra: 'QUANTIDADE'})} />
-                            Quantidade (Un)
+                            Qtd (Un)
                         </label>
                     </div>
 
@@ -86,7 +135,7 @@ export default function FornecedorCampanhas() {
                     <label style={{fontSize:'0.9rem', color:'#666'}}>Desconto (%):</label>
                     <input type="number" step="0.1" style={inputStyle} value={form.desconto_percentual} onChange={e=>setForm({...form, desconto_percentual: e.target.value})} required />
 
-                    <button type="submit" style={{width:'100%', padding:'12px', background:'#009933', color:'white', border:'none', borderRadius:'5px', fontWeight:'bold', cursor:'pointer'}}>SALVAR</button>
+                    <button type="submit" style={{width:'100%', padding:'12px', background:'#009933', color:'white', border:'none', borderRadius:'5px', fontWeight:'bold', cursor:'pointer'}}>CRIAR</button>
                 </form>
             </div>
 
@@ -105,16 +154,59 @@ export default function FornecedorCampanhas() {
                                     Regra: Acima de {c.tipo_regra === 'VALOR' ? `R$ ${c.gatilho}` : `${c.gatilho} un.`}
                                 </div>
                             </div>
-                            <div style={{display:'flex', alignItems:'center', gap:'20px'}}>
+                            <div style={{display:'flex', alignItems:'center', gap:'15px'}}>
                                 <span style={{background:'#d4edda', color:'#155724', padding:'5px 10px', borderRadius:'15px', fontWeight:'bold'}}>
                                     <FaPercentage size={10}/> {c.desconto_percentual}%
                                 </span>
-                                <button onClick={() => handleExcluir(c.id)} style={{background:'transparent', border:'none', color:'#dc3545', cursor:'pointer'}}><FaTrash /></button>
+                                {/* Botão Editar */}
+                                <button onClick={() => abrirEdicao(c)} style={{background:'transparent', border:'none', color:'#007bff', cursor:'pointer'}} title="Editar">
+                                    <FaEdit size={18} />
+                                </button>
+                                {/* Botão Excluir */}
+                                <button onClick={() => handleExcluir(c.id)} style={{background:'transparent', border:'none', color:'#dc3545', cursor:'pointer'}} title="Excluir">
+                                    <FaTrash size={16} />
+                                </button>
                             </div>
                         </div>
                     ))}
                 </div>
             </div>
+
+            {/* --- MODAL DE EDIÇÃO --- */}
+            {editando && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000,
+                    display: 'flex', justifyContent: 'center', alignItems: 'center'
+                }}>
+                    <div style={{ background: 'white', padding: '30px', borderRadius: '10px', width: '400px', boxShadow: '0 5px 15px rgba(0,0,0,0.3)' }}>
+                        <h3 style={{marginTop:0, marginBottom:'20px', color:'#333'}}>Editar Campanha</h3>
+                        
+                        <label style={{fontSize:'0.9rem', color:'#666'}}>Descrição:</label>
+                        <input style={inputStyle} value={editando.descricao} onChange={e=>setEditando({...editando, descricao: e.target.value})} />
+
+                        <label style={{fontSize:'0.9rem', color:'#666'}}>Duração (Dias):</label>
+                        <input type="number" style={inputStyle} value={editando.dias_duracao} onChange={e=>setEditando({...editando, dias_duracao: e.target.value})} />
+
+                        <label style={{fontSize:'0.9rem', color:'#666'}}>Tipo de Regra:</label>
+                        <div style={{display:'flex', gap:'10px', marginBottom:'15px'}}>
+                            <label style={{cursor:'pointer'}}><input type="radio" checked={editando.tipo_regra === 'VALOR'} onChange={() => setEditando({...editando, tipo_regra: 'VALOR'})} /> Valor</label>
+                            <label style={{cursor:'pointer'}}><input type="radio" checked={editando.tipo_regra === 'QUANTIDADE'} onChange={() => setEditando({...editando, tipo_regra: 'QUANTIDADE'})} /> Quantidade</label>
+                        </div>
+
+                        <label style={{fontSize:'0.9rem', color:'#666'}}>Gatilho (Valor ou Qtd):</label>
+                        <input type="number" style={inputStyle} value={editando.gatilho} onChange={e=>setEditando({...editando, gatilho: e.target.value})} />
+
+                        <label style={{fontSize:'0.9rem', color:'#666'}}>Desconto (%):</label>
+                        <input type="number" step="0.1" style={inputStyle} value={editando.desconto_percentual} onChange={e=>setEditando({...editando, desconto_percentual: e.target.value})} />
+
+                        <div style={{display:'flex', gap:'10px', marginTop:'15px'}}>
+                            <button onClick={salvarEdicao} style={{flex:1, padding:'10px', background:'#28a745', color:'white', border:'none', borderRadius:'5px', cursor:'pointer', fontWeight:'bold'}}>SALVAR</button>
+                            <button onClick={() => setEditando(null)} style={{flex:1, padding:'10px', background:'#6c757d', color:'white', border:'none', borderRadius:'5px', cursor:'pointer', fontWeight:'bold'}}>CANCELAR</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
