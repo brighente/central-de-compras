@@ -4,10 +4,8 @@ import AuthContext from '../../context/AuthContext';
 export default function Sidebar({ title, children }) {
     const { logout, authState } = useContext(AuthContext);
 
-    // Se o authState não existir ou user não existir, não renderiza para evitar crash
     if (!authState || !authState.user) return null;
 
-    // --- COMPONENTE LOGO ADAPTADO PARA SIDEBAR ---
     const SidebarLogo = () => (
         <div style={{ 
             display: 'flex', 
@@ -18,15 +16,12 @@ export default function Sidebar({ title, children }) {
             paddingBottom: '20px',
             borderBottom: '1px solid rgba(255,255,255,0.1)' 
         }}>
-            {/* Ícone SVG - Tamanho reduzido para 32px */}
             <svg width="32" height="32" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <rect x="8" y="24" width="18" height="18" rx="4" fill="#ffffff" />
                 <rect x="22" y="6" width="18" height="18" rx="4" fill="var(--cor-primary, #00ff55)" />
-                {/* Linha de conexão */}
                 <path d="M26 24H28C30.2091 24 32 25.7909 32 28V30" stroke="var(--cor-sidebar, #333)" strokeWidth="3" strokeLinecap="round"/>
             </svg>
             
-            {/* Texto Estilizado */}
             <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
                 <span style={{ 
                     fontSize: '22px', 
@@ -53,7 +48,7 @@ export default function Sidebar({ title, children }) {
     return (
         <div style={{
             width: '280px', 
-            backgroundColor: 'var(--cor-sidebar, #1e293b)', // Fallback de cor caso a var não carregue no preview
+            backgroundColor: 'var(--cor-sidebar, #1e293b)',
             color: 'white', 
             padding: '25px', 
             display: 'flex', 
@@ -66,10 +61,8 @@ export default function Sidebar({ title, children }) {
             overflow: 'hidden' 
         }}>
             
-            {/* 1. LOGO DA EMPRESA */}
             <SidebarLogo />
 
-            {/* 2. TÍTULO DA PÁGINA */}
             <h2 style={{ 
                 fontSize: '1rem', 
                 marginBottom: '20px', 
@@ -83,7 +76,6 @@ export default function Sidebar({ title, children }) {
                 {title} 
             </h2>
 
-            {/* 3. ÁREA DE CONTEÚDO (MENUS) */}
             <div style={{ 
                 flex: 1, 
                 overflowY: 'auto', 
@@ -93,7 +85,6 @@ export default function Sidebar({ title, children }) {
                 {children} 
             </div>
 
-            {/* 4. RODAPÉ (USER + LOGOUT) */}
             <div style={{ 
                 marginTop: '20px', 
                 paddingTop: '20px', 

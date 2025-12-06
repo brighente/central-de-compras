@@ -47,17 +47,14 @@ function LoginPage() {
         }
     };
 
-    // Componente do Logo Systemac (Ajustado para linha única)
     const LogoSystemac = () => (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '15px' }}>
-            {/* Ícone SVG */}
             <svg width="42" height="42" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <rect x="8" y="24" width="18" height="18" rx="4" fill="var(--cor-sidebar, #334155)" />
                 <rect x="22" y="6" width="18" height="18" rx="4" fill="var(--cor-primary, #2563eb)" />
                 <path d="M26 24H28C30.2091 24 32 25.7909 32 28V30" stroke="white" strokeWidth="3" strokeLinecap="round"/>
             </svg>
             
-            {/* Texto Estilizado - Agora na mesma linha */}
             <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
                 <span style={{ 
                     fontSize: '32px', 
@@ -91,7 +88,6 @@ function LoginPage() {
             padding: '20px' 
         }}>
         
-            {/* CARD DE LOGIN */}
             <div style={{ 
                 width: '100%', 
                 maxWidth: '420px', 
@@ -105,7 +101,6 @@ function LoginPage() {
                 borderTop: '6px solid var(--cor-primary, #2563eb)'
             }}>
                 
-                {/* CABEÇALHO COM LOGO */}
                 <div style={{ textAlign: 'center', marginBottom: '10px' }}>
                     <LogoSystemac />
                     <h2 style={{ 
@@ -118,10 +113,8 @@ function LoginPage() {
                     </h2>
                 </div>
 
-                {/* FORMULÁRIO */}
                 <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 
-                    {/* Campo Email */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         <label htmlFor="email" style={{ fontSize: '0.9rem', fontWeight: '700', color: '#334155' }}>E-mail Corporativo</label>
                         <input 
@@ -153,7 +146,6 @@ function LoginPage() {
                         />
                     </div>
 
-                    {/* Campo Senha */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <label htmlFor="senha" style={{ fontSize: '0.9rem', fontWeight: '700', color: '#334155' }}>Senha</label>
@@ -185,7 +177,6 @@ function LoginPage() {
                         />
                     </div>
 
-                    {/* Mensagem de Erro */}
                     {error && (
                         <div style={{ 
                             backgroundColor: '#fef2f2', 
@@ -200,7 +191,6 @@ function LoginPage() {
                         </div>
                     )}
 
-                    {/* Botão Entrar */}
                     <button type="submit" disabled={loading}
                     style={{ 
                         backgroundColor: loading ? '#94a3b8' : 'var(--cor-primary, #2563eb)', 
@@ -226,7 +216,6 @@ function LoginPage() {
 
                 </form>
 
-                {/* Rodapé do Card */}
                 <div style={{ textAlign: 'center', fontSize: '0.8rem', color: '#94a3b8', marginTop: '10px' }}>
                     Systemac v1.0 • Gestão de Materiais
                 </div>

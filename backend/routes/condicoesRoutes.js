@@ -3,18 +3,12 @@ const router = express.Router();
 const db = require('../db');
 const authMiddleware = require('../authMiddleware');
 
-// Garante que todo mundo que acessar aqui esteja logado (seja Loja ou Fornecedor)
 router.use(authMiddleware); 
 
-// ====================================================
-// PARTE 0: ROTA PÚBLICA PARA A LOJA (CONSULTA)
-// ====================================================
-// Essa é a rota que o LojaDashboard.jsx vai chamar para preencher o select
-router.get('/fornecedor/:id/pagamentos', async (req, res) => {
-    const { id } = req.params; // ID do Fornecedor vindo da URL
 
+router.get('/fornecedor/:id/pagamentos', async (req, res) => {
+    const { id } = req.params;
     try {
-        // Busca direto na tabela de pagamentos filtrando pelo ID do fornecedor passado
         const pagamentos = await db('tb_fornecedor_condicao_pagamento')
             .where({ id_fornecedor: id })
             .select('id', 'descricao');
@@ -26,12 +20,6 @@ router.get('/fornecedor/:id/pagamentos', async (req, res) => {
     }
 });
 
-
-// ====================================================
-// PARTE 1: REGRAS REGIONAIS (ESTADOS/UF) - USO DO FORNECEDOR
-// ====================================================
-
-// LISTAR
 router.get('/', async (req, res) => {
     try {
         const fornecedor = await db('tb_fornecedor').where({id_usuario: req.user.userId}).first();
@@ -45,7 +33,6 @@ router.get('/', async (req, res) => {
     }
 });
 
-// CRIAR (POST)
 router.post('/', async (req, res) =>{
     const { estado, valor_cashback_percentual, prazo_pagamento_dias, acrescimo_desconto_unitario_valor } = req.body;
 
@@ -53,7 +40,6 @@ router.post('/', async (req, res) =>{
         const fornecedor = await db('tb_fornecedor').where({id_usuario: req.user.userId}).first();
         if(!fornecedor) return res.status(403).json({message: 'Apenas fornecedores podem criar regras.'});
         
-        // Verifica se já existe regra para esse estado
         const existe = await db('tb_fornecedor_condicao_estado')
             .where({ id_fornecedor: fornecedor.id, estado }).first();
 
@@ -75,7 +61,6 @@ router.post('/', async (req, res) =>{
     }
 });
 
-// EDITAR (PUT)
 router.put('/:id', async (req, res) => {
     const { id } = req.params;
     const { valor_cashback_percentual, prazo_pagamento_dias, acrescimo_desconto_unitario_valor } = req.body;
@@ -103,7 +88,6 @@ router.put('/:id', async (req, res) => {
     }
 });
 
-// EXCLUIR
 router.delete('/:id', async (req, res) => {
     const { id } = req.params;
     try{
@@ -119,11 +103,6 @@ router.delete('/:id', async (req, res) => {
 });
 
 
-// ====================================================
-// PARTE 2: FORMAS DE PAGAMENTO (Gerenciamento pelo Fornecedor)
-// ====================================================
-
-// LISTAR (Para o Fornecedor ver as suas próprias)
 router.get('/pagamento', async (req, res) => {
     try {
         const fornecedor = await db('tb_fornecedor').where({id_usuario: req.user.userId}).first();
@@ -137,7 +116,6 @@ router.get('/pagamento', async (req, res) => {
     }
 });
 
-// CRIAR
 router.post('/pagamento', async (req, res) => {
     const { descricao } = req.body;
     try {
@@ -156,7 +134,6 @@ router.post('/pagamento', async (req, res) => {
     }
 });
 
-// EDITAR (PUT)
 router.put('/pagamento/:id', async (req, res) => {
     const { id } = req.params;
     const { descricao } = req.body;
@@ -180,7 +157,6 @@ router.put('/pagamento/:id', async (req, res) => {
     }
 });
 
-// EXCLUIR
 router.delete('/pagamento/:id', async (req, res) => {
     const { id } = req.params;
     try {

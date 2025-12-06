@@ -10,24 +10,20 @@ export default function LojaVitrine() {
     const { authState } = useContext(AuthContext);
     const { addToCart } = useContext(CartContext);
 
-    // --- ESTADOS ---
     const [produtos, setProdutos] = useState([]);
     const [categorias, setCategorias] = useState([]);
     const [campanhas, setCampanhas] = useState([]); 
     const [loading, setLoading] = useState(true);
     
-    // Filtros
     const [searchTerm, setSearchTerm] = useState('');
     const [catSelecionada, setCatSelecionada] = useState('todos');
     const [viewMode, setViewMode] = useState('grid');
 
-    // --- BUSCA DE DADOS ---
     useEffect(() => {
         const fetchDados = async () => {
             try {
                 const headers = { 'Authorization': `Bearer ${authState.token}` };
                 
-                // Busca Produtos, Categorias e Campanhas em paralelo
                 const [resProd, resCat, resCamp] = await Promise.all([
                     fetch('http://localhost:3001/api/vitrine', { headers }),
                     fetch('http://localhost:3001/api/vitrine/categorias', { headers }),
@@ -47,7 +43,6 @@ export default function LojaVitrine() {
         fetchDados();
     }, [authState.token]);
 
-    // --- LÓGICA DE FILTRAGEM ---
     const produtosFiltrados = produtos.filter(p => {
         const termo = searchTerm.toLowerCase();
         const matchTexto = p.produto.toLowerCase().includes(termo) || 
@@ -58,7 +53,6 @@ export default function LojaVitrine() {
         return matchTexto && matchCategoria;
     });
 
-    // --- HANDLERS ---
     const handleAddToCart = (prod) => {
         const precoEfetivo = prod.valor_final !== undefined ? prod.valor_final : prod.valor_produto;
         const produtoParaCarrinho = {
@@ -69,7 +63,6 @@ export default function LojaVitrine() {
         addToCart(produtoParaCarrinho);
     };
 
-    // --- SUB-COMPONENTE DE PREÇO ---
     const PriceDisplay = ({ prod }) => {
         const precoFinal = parseFloat(prod.valor_final || prod.valor_produto);
         const precoOriginal = parseFloat(prod.valor_original || prod.valor_produto);
@@ -77,7 +70,7 @@ export default function LojaVitrine() {
 
         let corPreco = '#333';
         if (teveAjuste) {
-            corPreco = precoFinal < precoOriginal ? '#009933' : '#d35400'; // Verde se desconto, Laranja se acréscimo
+            corPreco = precoFinal < precoOriginal ? '#009933' : '#d35400';
         }
 
         return (
@@ -99,11 +92,9 @@ export default function LojaVitrine() {
         );
     };
 
-    // --- RENDERIZAÇÃO ---
     return (
         <div style={styles.container}>
             
-            {/* --- HEADER (TÍTULO E BUSCA) --- */}
             <div style={styles.headerContainer}>
                 <div style={styles.topRow}>
                     <h2 style={styles.title}>Vitrine de Ofertas</h2>
@@ -281,7 +272,7 @@ export default function LojaVitrine() {
     );
 }
 
-// --- ESTILOS CSS-IN-JS ---
+
 const styles = {
     container: { paddingBottom: '40px' },
     headerContainer: { marginBottom: '35px' },
@@ -289,7 +280,7 @@ const styles = {
     topRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px', marginBottom: '20px' },
     title: { fontSize: '1.8rem', color: '#2c3e50', borderLeft: '5px solid #009933', paddingLeft: '15px', margin: 0 },
     
-    // Filtros e Controles
+    // Filtros
     controls: { display: 'flex', gap: '15px', alignItems: 'center' },
     searchBox: { position: 'relative' },
     searchInput: { padding: '10px 15px 10px 35px', borderRadius: '25px', border: '1px solid #ddd', width: '250px', outline: 'none', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' },
@@ -333,7 +324,7 @@ const styles = {
     card: { background: 'white', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.06)', transition: 'transform 0.2s', display: 'flex', flexDirection: 'column' },
     cardBody: { padding: '20px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' },
     
-    // Imagem Grid (Contain)
+    // Imagem Grid
     imgContainer: { height: '200px', background: '#f8f9fa', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#dee2e6', overflow: 'hidden', position: 'relative' },
     productImage: { width: '100%', height: '100%', objectFit: 'contain', display: 'block' },
     
@@ -341,7 +332,7 @@ const styles = {
     badge: { alignSelf: 'flex-start', background: '#f1f8e9', color: '#558b2f', padding: '4px 10px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: '800', textTransform: 'uppercase', marginBottom: '10px' },
     fornecedorTag: { fontSize: '0.8rem', color: '#555', display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '10px' },
 
-    // Lista e Imagem Lista (Cover)
+    // Lista e Imagem Lista
     listContainer: { display: 'flex', flexDirection: 'column', gap: '15px' },
     listItem: { background: 'white', borderRadius: '10px', padding: '15px', display: 'flex', alignItems: 'center', gap: '20px', boxShadow: '0 2px 6px rgba(0,0,0,0.04)' },
     listImgContainer: { width: '100px', height: '100px', background: '#f8f9fa', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#dee2e6', overflow: 'hidden', flexShrink: 0 },

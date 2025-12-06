@@ -6,7 +6,6 @@ export default function FornecedorPedidos() {
     const { authState } = useContext(AuthContext);
     const [meusPedidos, setMeusPedidos] = useState([]);
     
-    // Estado para controlar qual pedido está sendo editado
     const [editandoId, setEditandoId] = useState(null);
     const [novoStatus, setNovoStatus] = useState('');
 
@@ -35,8 +34,8 @@ export default function FornecedorPedidos() {
                 body: JSON.stringify({ status: statusParaEnviar })
             });
             if(res.ok) {
-                fetchPedidos(); // Recarrega para ver a mudança
-                setEditandoId(null); // Fecha o modo de edição se estiver aberto
+                fetchPedidos();
+                setEditandoId(null); 
             } else {
                 alert('Erro ao atualizar pedido');
             }
@@ -95,10 +94,8 @@ export default function FornecedorPedidos() {
                                 </td>
                                 
                                 <td style={{padding: '12px'}}>
-                                    {/* MODO DE VISUALIZAÇÃO PADRÃO */}
                                     {editandoId !== p.id && (
                                         <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
-                                            {/* Botões rápidos de fluxo normal */}
                                             {p.status === 'PENDENTE' && (
                                                 <button onClick={() => atualizarStatus(p.id, 'SEPARADO')} style={btnAcaoStyle('#007bff')} title="Marcar como Separado">
                                                     <FaBox style={{marginRight: '5px'}}/> Separar
@@ -110,7 +107,6 @@ export default function FornecedorPedidos() {
                                                 </button>
                                             )}
                                             
-                                            {/* Botão de Edição Genérica (Lápis) */}
                                             <button 
                                                 onClick={() => iniciarEdicao(p)}
                                                 style={{background: 'transparent', border: '1px solid #ccc', borderRadius: '4px', padding: '6px', cursor: 'pointer', color: '#666'}}
@@ -121,7 +117,6 @@ export default function FornecedorPedidos() {
                                         </div>
                                     )}
 
-                                    {/* MODO DE EDIÇÃO */}
                                     {editandoId === p.id && (
                                         <div style={{display: 'flex', alignItems: 'center', gap: '5px', background: '#f8f9fa', padding: '5px', borderRadius: '5px', border: '1px solid #ddd'}}>
                                             <select 
@@ -162,7 +157,6 @@ export default function FornecedorPedidos() {
     );
 }
 
-// ... BadgeStatus e btnAcaoStyle permanecem iguais ao seu código original ...
 const BadgeStatus = ({ status }) => {
     let cor = '#6c757d'; 
     let bg = '#e2e3e5';

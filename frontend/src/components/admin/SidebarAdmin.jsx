@@ -10,12 +10,9 @@ export default function SidebarAdmin({ aoClicar, activeView }) {
         setOpenMenu(openMenu === menuName ? '' : menuName);
     };
 
-    // Arrays para identificar se o menu PAI deve acender quando um filho estiver ativo
     const viewsCadastrar = ['loja', 'fornecedor', 'produto'];
     const viewsListas    = ['lista_loja', 'lista_fornecedor', 'lista_produto'];
 
-    // --- LÓGICA DE INTERAÇÃO (HOVER) ---
-    // Isso faz o botão reagir quando o mouse passa por cima, mas respeita se ele já estiver ativo
     const handleMouseEnter = (e, isActive) => {
         if (!isActive) {
             e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
@@ -28,7 +25,6 @@ export default function SidebarAdmin({ aoClicar, activeView }) {
         }
     };
 
-    // --- 1. ESTILO DO PAI (Menu Principal) ---
     const menuItemStyle = (isActive) => ({
         padding: '12px 15px',
         margin: '5px 0',
@@ -46,9 +42,8 @@ export default function SidebarAdmin({ aoClicar, activeView }) {
         userSelect: 'none'
     });
 
-    // --- 2. ESTILO DOS FILHOS (Subitems) ---
     const subItemStyle = (isActive) => ({
-        padding: '10px 10px 10px 35px', // Indentação para a direita
+        padding: '10px 10px 10px 35px', 
         margin: '2px 0',
         borderRadius: '6px',
         cursor: 'pointer',
@@ -57,14 +52,12 @@ export default function SidebarAdmin({ aoClicar, activeView }) {
         gap: '10px',
         color: 'rgba(255,255,255,0.8)', 
         fontSize: '0.9rem',
-        // Se ativo: Fundo claro + Borda Verde. Se inativo: Transparente
         background: isActive ? 'rgba(255,255,255,0.1)' : 'transparent',
         borderLeft: isActive ? '4px solid #00ff55' : '4px solid transparent',
         fontWeight: isActive ? 'bold' : 'normal',
         transition: 'all 0.2s'
     });
 
-    // Verificações para acender o Pai
     const isCadastrarActive = openMenu === 'cadastrar' || viewsCadastrar.includes(activeView);
     const isListasActive = openMenu === 'listas' || viewsListas.includes(activeView);
 
@@ -72,7 +65,6 @@ export default function SidebarAdmin({ aoClicar, activeView }) {
         <Sidebar title="PAINEL ADM">
             <div style={{ flex: 1 }}>
                 
-                {/* === MENU: CADASTRAR === */}
                 <div>
                     <div 
                         style={menuItemStyle(isCadastrarActive)} 
@@ -118,7 +110,6 @@ export default function SidebarAdmin({ aoClicar, activeView }) {
                     )}
                 </div>
 
-                {/* === MENU: GERENCIAR LISTAS === */}
                 <div style={{ marginTop: '10px' }}>
                     <div 
                         style={menuItemStyle(isListasActive)} 

@@ -3,9 +3,6 @@
  * @returns { Promise<void> }
  */
 exports.up = async function(knex) {
-  // --------------------------------------------------------
-  // 1. CRIAÇÃO DE ENUMS (Tipos personalizados do Postgres)
-  // --------------------------------------------------------
   await knex.raw("DROP TYPE IF EXISTS tipo_perfil CASCADE");
   await knex.raw("CREATE TYPE tipo_perfil AS ENUM ('ADMIN', 'LOJA', 'FORNECEDOR')");
 
@@ -16,9 +13,6 @@ exports.up = async function(knex) {
   await knex.raw("CREATE TYPE tipo_campanha AS ENUM ('VALOR_PEDIDO', 'QTD_PRODUTO')");
 
   return knex.schema
-    // --------------------------------------------------------
-    // 2. TABELAS DO SISTEMA (Conta e Usuário)
-    // --------------------------------------------------------
     .createTable('tb_sistema_conta', table => {
       table.bigIncrements('id').primary();
       table.timestamp('dh_inc').defaultTo(knex.fn.now()).notNullable();
@@ -41,10 +35,6 @@ exports.up = async function(knex) {
         .references('id').inTable('tb_sistema_usuario').onDelete('CASCADE');
       table.specificType('perfil', 'tipo_perfil').notNullable();
     })
-
-    // --------------------------------------------------------
-    // 3. TABELAS PRINCIPAIS (Categoria, Loja, Fornecedor)
-    // --------------------------------------------------------
     .createTable('tb_categoria', table => {
       table.bigIncrements('id').primary();
       table.bigInteger('id_conta').unsigned().notNullable().references('id').inTable('tb_sistema_conta');
@@ -72,10 +62,6 @@ exports.up = async function(knex) {
       table.string('telefone', 255);
       table.boolean('ativo').defaultTo(true);
     })
-
-    // --------------------------------------------------------
-    // 4. DETALHES (Endereços e Configurações)
-    // --------------------------------------------------------
     .createTable('tb_loja_endereco', table => {
       table.bigIncrements('id').primary();
       table.bigInteger('id_loja').unsigned().notNullable()
@@ -110,7 +96,7 @@ exports.up = async function(knex) {
       table.timestamp('dt_inc').defaultTo(knex.fn.now());
     })
     .createTable('tb_fornecedor_condicao_pagamento', table => {
-      table.increments('id').primary(); // Mantendo integer conforme seus scripts
+      table.increments('id').primary();
       table.integer('id_fornecedor').notNullable(); 
       table.string('descricao', 255).notNullable();
       table.timestamp('dt_inc').defaultTo(knex.fn.now());
@@ -140,10 +126,6 @@ exports.up = async function(knex) {
       table.decimal('percentual_desconto', 5, 2);
       table.specificType('tipo_regra', 'tipo_campanha').defaultTo('VALOR_PEDIDO');
     })
-
-    // --------------------------------------------------------
-    // 5. PRODUTOS, PEDIDOS E MOVIMENTAÇÃO
-    // --------------------------------------------------------
     .createTable('tb_fornecedor_produto', table => {
       table.bigIncrements('id').primary();
       table.bigInteger('id_fornecedor').unsigned().notNullable().references('id').inTable('tb_fornecedor');
@@ -184,7 +166,6 @@ exports.up = async function(knex) {
  * @returns { Promise<void> }
  */
 exports.down = async function(knex) {
-  // Ordem reversa EXATA para evitar erro de chave estrangeira ao desfazer
   await knex.schema.dropTableIfExists('tb_loja_cashback');
   await knex.schema.dropTableIfExists('tb_pedido_item');
   await knex.schema.dropTableIfExists('tb_pedido');
@@ -202,7 +183,6 @@ exports.down = async function(knex) {
   await knex.schema.dropTableIfExists('tb_sistema_usuario');
   await knex.schema.dropTableIfExists('tb_sistema_conta');
 
-  // Remove os tipos
   await knex.raw("DROP TYPE IF EXISTS tipo_campanha");
   await knex.raw("DROP TYPE IF EXISTS tipo_status_pedido");
   await knex.raw("DROP TYPE IF EXISTS tipo_perfil");

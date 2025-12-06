@@ -1,10 +1,8 @@
 import React, { useContext } from 'react';
-// Removemos useNavigate e useLocation pois não vamos usar rotas aqui
 import Sidebar from '../shared/Sidebar'; 
 import { FaStore, FaBoxOpen, FaUserCog, FaShoppingCart, FaTrash } from 'react-icons/fa';
 import CartContext from '../../context/CartContext';
 
-// --- COMPONENTE INTERNO DO CARRINHO (Mantive igualzinho o seu) ---
 const InternalCarrinho = ({ onCheckout }) => {
     const { cartItens, removerDoCart, cartTotal } = useContext(CartContext);
 
@@ -71,11 +69,8 @@ const InternalCarrinho = ({ onCheckout }) => {
     );
 };
 
-// --- COMPONENTE PRINCIPAL ALTERADO ---
-// Agora recebemos 'setView' e 'activeView' do pai
 export default function SidebarLoja({ onCheckout, setView, activeView }) {
     
-    // Função de estilo baseada na prop activeView
     const menuItemStyle = (viewName) => {
         const isActive = activeView === viewName;
         return {
@@ -96,10 +91,8 @@ export default function SidebarLoja({ onCheckout, setView, activeView }) {
 
     return (
         <Sidebar title="ÁREA DO LOJISTA">
-            {/* MENU DE NAVEGAÇÃO */}
             <div style={{ marginBottom: '30px', flex: 1 }}>
                 
-                {/* BOTÃO VITRINE */}
                 <div 
                     style={menuItemStyle('vitrine')} 
                     onClick={() => setView('vitrine')}
@@ -107,7 +100,6 @@ export default function SidebarLoja({ onCheckout, setView, activeView }) {
                     <FaStore /> Vitrine de Ofertas
                 </div>
 
-                {/* BOTÃO PEDIDOS */}
                 <div 
                     style={menuItemStyle('pedidos')} 
                     onClick={() => setView('pedidos')}
@@ -115,7 +107,6 @@ export default function SidebarLoja({ onCheckout, setView, activeView }) {
                     <FaBoxOpen /> Histórico de Pedidos
                 </div>
 
-                {/* BOTÃO PERFIL */}
                 <div 
                     style={menuItemStyle('perfil')} 
                     onClick={() => setView('perfil')}
@@ -124,7 +115,6 @@ export default function SidebarLoja({ onCheckout, setView, activeView }) {
                 </div>
             </div>
 
-            {/* CARRINHO INTEGRADO */}
             <InternalCarrinho onCheckout={onCheckout} />
         </Sidebar>
     );

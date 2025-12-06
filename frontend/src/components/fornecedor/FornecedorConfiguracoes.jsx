@@ -5,11 +5,9 @@ import { FaMapMarkedAlt, FaMoneyCheckAlt, FaTrash, FaPlus, FaSave, FaEdit } from
 export default function FornecedorConfiguracoes() {
     const { authState } = useContext(AuthContext);
     
-    // --- ESTADOS ---
     const [regrasEstados, setRegrasEstados] = useState([]);
     const [formasPagamento, setFormasPagamento] = useState([]);
 
-    // Estado para Nova Regra
     const [formEstado, setFormEstado] = useState({
         estado: 'SC',
         valor_cashback_percentual: '',
@@ -17,7 +15,6 @@ export default function FornecedorConfiguracoes() {
         acrescimo_desconto_unitario_valor: ''
     });
 
-    // Estado para Edição de Regra (Modal)
     const [editandoRegra, setEditandoRegra] = useState(null);
 
     const OPCOES_PAGAMENTO = [
@@ -36,7 +33,6 @@ export default function FornecedorConfiguracoes() {
 
     const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authState.token}` };
 
-    // --- CARREGAMENTO ---
     useEffect(() => {
         if(authState.token){
             carregarRegras();
@@ -58,7 +54,6 @@ export default function FornecedorConfiguracoes() {
             .catch(console.error);
     };
 
-    // --- HANDLERS REGRAS (CRIAR E EXCLUIR) ---
     const handleSalvarRegra = async (e) => {
         e.preventDefault();
         const payload = {
@@ -88,11 +83,10 @@ export default function FornecedorConfiguracoes() {
         carregarRegras();
     };
 
-    // --- HANDLERS EDIÇÃO (NOVO) ---
     const abrirEdicaoRegra = (regra) => {
         setEditandoRegra({
             id: regra.id,
-            estado: regra.estado, // Apenas visual, geralmente não se edita a chave (estado) no update, mas útil mostrar
+            estado: regra.estado,
             valor_cashback_percentual: regra.valor_cashback_percentual,
             prazo_pagamento_dias: regra.prazo_pagamento_dias,
             acrescimo_desconto_unitario_valor: regra.acrescimo_desconto_unitario_valor
@@ -127,7 +121,6 @@ export default function FornecedorConfiguracoes() {
         }
     };
 
-    // --- HANDLERS PAGAMENTO ---
     const handleSalvarPagamento = async (e) => {
         e.preventDefault();
         let descricaoFinal = "";
@@ -161,7 +154,6 @@ export default function FornecedorConfiguracoes() {
 
     const ufs = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
 
-    // --- ESTILOS ---
     const styles = {
         container: { maxWidth: '1200px', margin: '0 auto' },
         header: { color: '#444', marginBottom: '25px', borderLeft: '5px solid #009933', paddingLeft: '15px' },
@@ -181,11 +173,9 @@ export default function FornecedorConfiguracoes() {
         <div style={styles.container}>
             <h2 style={styles.header}>Configurações de Venda</h2>
 
-            {/* PARTE 1: REGRAS REGIONAIS */}
             <div style={styles.section}>
                 <h3 style={styles.sectionTitle}><FaMapMarkedAlt color="#009933"/> Regras Regionais (Logística & Impostos)</h3>
                 
-                {/* Form Adicionar */}
                 <form onSubmit={handleSalvarRegra}>
                     <div style={styles.formGrid}>
                         <div style={styles.inputGroup}>
@@ -210,7 +200,6 @@ export default function FornecedorConfiguracoes() {
                     <button type="submit" style={styles.btnAdd}><FaPlus /> ADICIONAR REGRA</button>
                 </form>
 
-                {/* Tabela de Regras */}
                 <div style={{marginTop: '30px'}}>
                      {regrasEstados.length > 0 && (
                         <table style={styles.table}>
@@ -242,7 +231,6 @@ export default function FornecedorConfiguracoes() {
                 </div>
             </div>
 
-            {/* PARTE 2: FORMAS DE PAGAMENTO */}
             <div style={styles.section}>
                 <h3 style={styles.sectionTitle}><FaMoneyCheckAlt color="#009933"/> Formas de Pagamento</h3>
                 <div style={{display: 'flex', flexWrap: 'wrap', gap: '30px'}}>
@@ -278,7 +266,6 @@ export default function FornecedorConfiguracoes() {
                 </div>
             </div>
 
-            {/* --- MODAL DE EDIÇÃO (REGRAS) --- */}
             {editandoRegra && (
                 <div style={{
                     position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,

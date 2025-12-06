@@ -116,7 +116,6 @@ export default function GerenciarProdutos(){
         <div>
             <h2 style={{ color: 'var(--cor-sidebar)', marginBottom: '20px' }}>Gerenciar Meus Produtos</h2>
             
-            {/* Formulário de Editar - Criar */}
             <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.05)', marginBottom: '30px', borderLeft: isEditing ? '5px solid orange' : '5px solid var(--cor-primary)' }}>
                 <h3 style={{ marginTop: 0, fontSize: '1rem', color: '#666' }}> {isEditing ? '✏️ Editando Produto' : '✨ Adicionar Novo Produto'} </h3>
             
@@ -153,7 +152,6 @@ export default function GerenciarProdutos(){
                 </form>
             </div>
 
-            {/* Lista de Produtos */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
                 {produtos.map(prod => (
                     <div key={prod.id} style={{ backgroundColor: 'white', borderRadius: '8px', padding: '15px', border: '1px solid #eee', position: 'relative', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
@@ -167,7 +165,6 @@ export default function GerenciarProdutos(){
                             R$ {prod.valor_produto}
                         </div>
 
-                        {/* Botoes do Card */}
                         <div style={{ position: 'absolute', top: '10px', right: '10px', display: 'flex', gap: '5px' }}>
                             <button onClick={() => handleEditar(prod)} title="Editar" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem' }}> ✏️ </button>
                             <button onClick={() => handleDeletar(prod.id)} title="Excluir" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem' }}> 🗑️ </button>
