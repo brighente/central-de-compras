@@ -1,10 +1,14 @@
 import React, { useState, useEffect, useContext } from 'react';
 import AuthContext from '../../context/AuthContext';
-import { FaBox, FaCheck, FaTruck, FaFileInvoiceDollar } from 'react-icons/fa';
+import { FaBox, FaCheck, FaTruck, FaFileInvoiceDollar, FaEdit, FaTimes } from 'react-icons/fa';
 
 export default function FornecedorPedidos() {
     const { authState } = useContext(AuthContext);
     const [meusPedidos, setMeusPedidos] = useState([]);
+    
+    // Estado para controlar qual pedido está sendo editado
+    const [editandoId, setEditandoId] = useState(null);
+    const [novoStatus, setNovoStatus] = useState('');
 
     useEffect(() => {
         if (!authState.token) return;
@@ -20,7 +24,7 @@ export default function FornecedorPedidos() {
         .catch(console.error);
     };
 
-    const atualizarStatus = async (id, novoStatus) => {
+    const atualizarStatus = async (id, statusParaEnviar) => {
         try {
             const res = await fetch(`http://localhost:3001/api/pedidos/${id}/status`, {
                 method: 'PATCH',
@@ -28,16 +32,22 @@ export default function FornecedorPedidos() {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${authState.token}`
                 },
-                body: JSON.stringify({ status: novoStatus })
+                body: JSON.stringify({ status: statusParaEnviar })
             });
             if(res.ok) {
                 fetchPedidos(); // Recarrega para ver a mudança
+                setEditandoId(null); // Fecha o modo de edição se estiver aberto
             } else {
                 alert('Erro ao atualizar pedido');
             }
         } catch(err) {
             alert('Erro de conexão');
         }
+    };
+
+    const iniciarEdicao = (pedido) => {
+        setEditandoId(pedido.id);
+        setNovoStatus(pedido.status);
     };
 
     return (
@@ -85,26 +95,62 @@ export default function FornecedorPedidos() {
                                 </td>
                                 
                                 <td style={{padding: '12px'}}>
-                                    {p.status === 'PENDENTE' && (
-                                        <button 
-                                            onClick={() => atualizarStatus(p.id, 'SEPARADO')}
-                                            style={btnAcaoStyle('#007bff')}
-                                            title="Marcar como Separado"
-                                        >
-                                            <FaBox style={{marginRight: '5px'}}/> Separar
-                                        </button>
+                                    {/* MODO DE VISUALIZAÇÃO PADRÃO */}
+                                    {editandoId !== p.id && (
+                                        <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
+                                            {/* Botões rápidos de fluxo normal */}
+                                            {p.status === 'PENDENTE' && (
+                                                <button onClick={() => atualizarStatus(p.id, 'SEPARADO')} style={btnAcaoStyle('#007bff')} title="Marcar como Separado">
+                                                    <FaBox style={{marginRight: '5px'}}/> Separar
+                                                </button>
+                                            )}
+                                            {p.status === 'SEPARADO' && (
+                                                <button onClick={() => atualizarStatus(p.id, 'ENVIADO')} style={btnAcaoStyle('#28a745')} title="Marcar como Enviado">
+                                                    <FaTruck style={{marginRight: '5px'}}/> Enviar
+                                                </button>
+                                            )}
+                                            
+                                            {/* Botão de Edição Genérica (Lápis) */}
+                                            <button 
+                                                onClick={() => iniciarEdicao(p)}
+                                                style={{background: 'transparent', border: '1px solid #ccc', borderRadius: '4px', padding: '6px', cursor: 'pointer', color: '#666'}}
+                                                title="Editar status manualmente"
+                                            >
+                                                <FaEdit />
+                                            </button>
+                                        </div>
                                     )}
-                                    {p.status === 'SEPARADO' && (
-                                        <button 
-                                            onClick={() => atualizarStatus(p.id, 'ENVIADO')}
-                                            style={btnAcaoStyle('#28a745')}
-                                            title="Marcar como Enviado"
-                                        >
-                                            <FaTruck style={{marginRight: '5px'}}/> Enviar
-                                        </button>
-                                    )}
-                                    {p.status === 'ENVIADO' && (
-                                        <span style={{color: '#28a745', fontSize: '1.2rem'}}><FaCheck /></span>
+
+                                    {/* MODO DE EDIÇÃO */}
+                                    {editandoId === p.id && (
+                                        <div style={{display: 'flex', alignItems: 'center', gap: '5px', background: '#f8f9fa', padding: '5px', borderRadius: '5px', border: '1px solid #ddd'}}>
+                                            <select 
+                                                value={novoStatus} 
+                                                onChange={(e) => setNovoStatus(e.target.value)}
+                                                style={{padding: '5px', borderRadius: '4px', border: '1px solid #ccc'}}
+                                            >
+                                                <option value="PENDENTE">PENDENTE</option>
+                                                <option value="SEPARADO">SEPARADO</option>
+                                                <option value="ENVIADO">ENVIADO</option>
+                                                <option value="CANCELADO">CANCELADO</option>
+                                            </select>
+                                            
+                                            <button 
+                                                onClick={() => atualizarStatus(p.id, novoStatus)}
+                                                style={{background: '#28a745', color: 'white', border: 'none', padding: '6px', borderRadius: '4px', cursor: 'pointer'}}
+                                                title="Salvar"
+                                            >
+                                                <FaCheck />
+                                            </button>
+                                            
+                                            <button 
+                                                onClick={() => setEditandoId(null)}
+                                                style={{background: '#dc3545', color: 'white', border: 'none', padding: '6px', borderRadius: '4px', cursor: 'pointer'}}
+                                                title="Cancelar"
+                                            >
+                                                <FaTimes />
+                                            </button>
+                                        </div>
                                     )}
                                 </td>
                             </tr>
@@ -116,9 +162,9 @@ export default function FornecedorPedidos() {
     );
 }
 
-// Componente visual para o Status
+// ... BadgeStatus e btnAcaoStyle permanecem iguais ao seu código original ...
 const BadgeStatus = ({ status }) => {
-    let cor = '#6c757d'; // Padrão cinza
+    let cor = '#6c757d'; 
     let bg = '#e2e3e5';
 
     if(status === 'PENDENTE') { cor = '#856404'; bg = '#fff3cd'; }

@@ -144,4 +144,49 @@ router.delete('/:id', async (req, res) => {
     }
 });
 
+router.get('/ativas', async (req, res) => {
+    try {
+        // Busca campanhas e junta com o nome do fornecedor
+        const campanhas = await db('tb_fornecedor_campanha')
+            .join('tb_fornecedor', 'tb_fornecedor_campanha.id_fornecedor', 'tb_fornecedor.id')
+            .select(
+                'tb_fornecedor_campanha.*',
+                'tb_fornecedor.nome_fantasia as nome_fornecedor'
+            )
+            .orderBy('tb_fornecedor_campanha.dt_inc', 'desc');
+
+        const agora = new Date();
+
+        // Filtra apenas as que ainda estão dentro do prazo
+        const ativas = campanhas.filter(c => {
+            const dataInicio = new Date(c.dt_inc);
+            // Cria a data de expiração somando os dias de duração
+            const dataFim = new Date(dataInicio);
+            dataFim.setDate(dataFim.getDate() + c.tempo_duracao_campanha);
+            
+            // Retorna true se Agora for menor ou igual a DataFim
+            return agora <= dataFim;
+        });
+
+        // Formata para o frontend
+        const formatadas = ativas.map(c => ({
+            id: c.id,
+            id_fornecedor: c.id_fornecedor, // Importante para linkar/filtrar depois se quiser
+            fornecedor: c.nome_fornecedor,
+            descricao: c.descricao_campanha,
+            tipo_regra: mapTipoRegraFromDB(c.tipo_regra),
+            gatilho: mapTipoRegraFromDB(c.tipo_regra) === 'QUANTIDADE' ? c.quantidade_meta : c.valor_meta,
+            desconto: c.percentual_desconto,
+            validade: new Date(new Date(c.dt_inc).setDate(new Date(c.dt_inc).getDate() + c.tempo_duracao_campanha)).toLocaleDateString('pt-BR')
+        }));
+
+        res.json(formatadas);
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Erro ao buscar campanhas ativas' });
+    }
+});
+
+
 module.exports = router;

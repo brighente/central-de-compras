@@ -44,15 +44,15 @@ router.get('/', async (req, res) => {
                 'prod.id',
                 'prod.produto',
                 'prod.valor_produto',
-                'prod.id_fornecedor',
-                'prod.id_categoria', // <--- IMPORTANTE PARA O FILTRO NO FRONT
+                'prod.id_fornecedor', // Você já estava buscando aqui, isso estava certo!
+                'prod.id_categoria',
                 'forn.nome_fantasia as fornecedor_nome',
                 'cat.nome_categoria',
                 'regra.acrescimo_desconto_unitario_valor'
             )
             .orderBy('forn.nome_fantasia');
 
-        // Cálculo do preço no JS (Mantido igual)
+        // Cálculo do preço no JS
         const produtosCalculados = produtos.map(item => {
             const valorBase = parseFloat(item.valor_produto);
             let valorFinal = valorBase;
@@ -69,10 +69,13 @@ router.get('/', async (req, res) => {
 
             return {
                 id: item.id,
+                // --- AQUI ESTAVA FALTANDO A LINHA ABAIXO ---
+                id_fornecedor: item.id_fornecedor, 
+                // -------------------------------------------
                 produto: item.produto,
                 fornecedor_nome: item.fornecedor_nome,
                 categoria: item.nome_categoria,
-                id_categoria: item.id_categoria, // <--- Passando o ID para o front
+                id_categoria: item.id_categoria, 
                 valor_original: valorBase,
                 valor_final: valorFinal, 
                 regra_aplicada: temRegra,

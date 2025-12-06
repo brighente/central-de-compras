@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { FaSearch, FaThLarge, FaList, FaCartPlus, FaImage, FaInfoCircle, FaFilter, FaStore } from 'react-icons/fa';
+import { FaSearch, FaThLarge, FaList, FaCartPlus, FaImage, FaInfoCircle, FaFilter, FaStore, FaTag, FaClock, FaFire } from 'react-icons/fa';
 import AuthContext from '../../context/AuthContext';
 import CartContext from '../../context/CartContext';
 
@@ -8,12 +8,13 @@ export default function LojaVitrine() {
     const { addToCart } = useContext(CartContext);
 
     const [produtos, setProdutos] = useState([]);
-    const [categorias, setCategorias] = useState([]); // Nova lista de categorias
+    const [categorias, setCategorias] = useState([]);
+    const [campanhas, setCampanhas] = useState([]); 
     const [loading, setLoading] = useState(true);
     
     // Filtros
     const [searchTerm, setSearchTerm] = useState('');
-    const [catSelecionada, setCatSelecionada] = useState('todos'); // 'todos' ou ID da categoria
+    const [catSelecionada, setCatSelecionada] = useState('todos');
     const [viewMode, setViewMode] = useState('grid');
 
     useEffect(() => {
@@ -21,20 +22,16 @@ export default function LojaVitrine() {
             try {
                 const headers = { 'Authorization': `Bearer ${authState.token}` };
                 
-                // Busca Produtos e Categorias em paralelo
-                const [resProd, resCat] = await Promise.all([
+                // Busca Produtos, Categorias e CAMPANHAS em paralelo
+                const [resProd, resCat, resCamp] = await Promise.all([
                     fetch('http://localhost:3001/api/vitrine', { headers }),
-                    fetch('http://localhost:3001/api/vitrine/categorias', { headers })
+                    fetch('http://localhost:3001/api/vitrine/categorias', { headers }),
+                    fetch('http://localhost:3001/api/campanhas/ativas', { headers })
                 ]);
 
-                if(resProd.ok) {
-                    const data = await resProd.json();
-                    setProdutos(data);
-                }
-                if(resCat.ok) {
-                    const dataCat = await resCat.json();
-                    setCategorias(dataCat);
-                }
+                if(resProd.ok) setProdutos(await resProd.json());
+                if(resCat.ok) setCategorias(await resCat.json());
+                if(resCamp.ok) setCampanhas(await resCamp.json());
 
             } catch(err) { console.error(err); } 
             finally { setLoading(false); }
@@ -42,8 +39,7 @@ export default function LojaVitrine() {
         fetchDados();
     }, [authState.token]);
 
-    // LÓGICA DE FILTRAGEM REFINADA
-    // O produto deve passar pelo filtro de Texto E pelo filtro de Categoria
+    // LÓGICA DE FILTRAGEM
     const produtosFiltrados = produtos.filter(p => {
         const matchTexto = p.produto.toLowerCase().includes(searchTerm.toLowerCase()) || 
                            (p.fornecedor_nome && p.fornecedor_nome.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -66,10 +62,68 @@ export default function LojaVitrine() {
     // --- ESTILOS ---
     const styles = {
         container: { paddingBottom: '40px' },
-        headerContainer: { marginBottom: '25px' },
+        headerContainer: { marginBottom: '35px' }, // Aumentei um pouco o espaço
+        
         topRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px', marginBottom: '20px' },
         title: { fontSize: '1.8rem', color: '#2c3e50', borderLeft: '5px solid #009933', paddingLeft: '15px', margin: 0 },
         
+        // --- ESTILOS DAS CAMPANHAS (ATUALIZADO) ---
+        campanhaSection: { 
+            marginBottom: '40px', 
+            padding: '20px 0', 
+            background: 'linear-gradient(to bottom, #fcfcfc, #f4f6f8)', // Fundo sutil para destacar a área
+            borderRadius: '16px',
+            border: '1px solid #eee'
+        },
+        // Título da seção de campanhas com ênfase
+        campanhaTitleContainer: {
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '10px',
+            marginBottom: '15px',
+        },
+        campanhaTitleText: {
+            fontSize: '1.3rem', 
+            color: '#333333', // Um vermelho levemente escuro para destaque (ou pode usar verde escuro)
+            fontWeight: '800', 
+            textTransform: 'uppercase', 
+            letterSpacing: '1px',
+            borderBottom: '2px solid #808080ff',
+            paddingBottom: '5px'
+        },
+        
+        campanhaScroll: { 
+            display: 'flex', 
+            gap: '25px', 
+            overflowX: 'auto', 
+            padding: '10px 20px 30px 20px', // Mais padding embaixo para a sombra não cortar
+            scrollbarWidth: 'thin',
+            // LÓGICA VISUAL: Se tiver menos de 3 itens, centraliza. Se tiver mais, alinha a esquerda para o scroll funcionar.
+            justifyContent: campanhas.length <= 3 ? 'center' : 'flex-start' 
+        },
+        campanhaCard: { 
+            minWidth: '280px', 
+            maxWidth: '300px', 
+            background: 'linear-gradient(135deg, #009933 0%, #a4d420ff 100%)', 
+            borderRadius: '16px', // Mais arredondado
+            padding: '20px', 
+            color: 'white', 
+            position: 'relative', 
+            // Sombra mais "flutuante"
+            boxShadow: '0 10px 25px -5px rgba(0, 153, 51, 0.4)',
+            display: 'flex', 
+            flexDirection: 'column', 
+            justifyContent: 'space-between',
+            transition: 'transform 0.2s',
+            cursor: 'default'
+        },
+        campanhaHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' },
+        campanhaTag: { background: 'white', color: '#009933', padding: '4px 10px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
+        campanhaDesc: { fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '5px', lineHeight: '1.3', textShadow: '0 1px 2px rgba(0,0,0,0.1)' },
+        campanhaRegra: { fontSize: '0.9rem', opacity: 0.95, marginBottom: '20px' },
+        campanhaFooter: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', opacity: 0.9, borderTop: '1px solid rgba(255,255,255,0.3)', paddingTop: '12px' },
+
         // Categoria Bar Styles
         categoryBar: { display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '10px', marginBottom: '15px', scrollbarWidth: 'thin' },
         catChip: (active) => ({
@@ -117,12 +171,21 @@ export default function LojaVitrine() {
         const precoOriginal = parseFloat(prod.valor_original || prod.valor_produto);
         const teveAjuste = Math.abs(precoFinal - precoOriginal) > 0.01;
 
+        // 🎯 LÓGICA DE COR:
+        // Padrão: Preto (#333)
+        // Se diminuiu (Desconto/Benefício): Verde (#009933)
+        // Se aumentou (Acréscimo/Imposto): Vermelho (#d35400)
+        let corPreco = '#333';
+        if (teveAjuste) {
+            corPreco = precoFinal < precoOriginal ? '#009933' : '#d35400';
+        }
+
         return (
             <div style={styles.priceContainer}>
                 {teveAjuste && <span style={styles.priceOrigin}>De: R$ {precoOriginal.toFixed(2)}</span>}
-                <div style={{...styles.price, color: teveAjuste ? '#d35400' : '#333'}}>R$ {precoFinal.toFixed(2)}</div>
+                <div style={{...styles.price, color: corPreco}}>R$ {precoFinal.toFixed(2)}</div>
                 {teveAjuste && (
-                    <div style={styles.regionalInfo} title={`Preço ajustado para ${prod.uf_usuario}`}>
+                    <div style={{...styles.regionalInfo, color: corPreco}} title={`Preço ajustado para ${prod.uf_usuario}`}>
                         <FaInfoCircle /> Regra de {prod.uf_usuario} aplicada
                     </div>
                 )}
@@ -132,6 +195,7 @@ export default function LojaVitrine() {
 
     return (
         <div style={styles.container}>
+            
             {/* Header com Título e Busca */}
             <div style={styles.headerContainer}>
                 <div style={styles.topRow}>
@@ -148,7 +212,42 @@ export default function LojaVitrine() {
                     </div>
                 </div>
 
-                {/* --- BARRA DE CATEGORIAS (NOVA) --- */}
+                {/* --- SEÇÃO DE DESTAQUES (CENTRALIZADA E ENFATIZADA) --- */}
+                {!loading && campanhas.length > 0 && (
+                    <div style={styles.campanhaSection}>
+                        <div style={styles.campanhaTitleContainer}>
+                            <span style={styles.campanhaTitleText}>Oportunidades Ativas</span>
+                        </div>
+                        
+                        <div style={styles.campanhaScroll} className="custom-scrollbar">
+                            {campanhas.map(camp => (
+                                <div key={camp.id} style={styles.campanhaCard}>
+                                    <div>
+                                        <div style={styles.campanhaHeader}>
+                                            <div style={{display:'flex', alignItems:'center', gap: '6px', fontSize: '0.9rem', fontWeight:'500'}}>
+                                                <FaStore /> {camp.fornecedor}
+                                            </div>
+                                            <span style={styles.campanhaTag}>{camp.desconto}% OFF</span>
+                                        </div>
+                                        <div style={styles.campanhaDesc}>{camp.descricao}</div>
+                                        <div style={styles.campanhaRegra}>
+                                            {camp.tipo_regra === 'VALOR' 
+                                                ? `Acima de R$ ${parseFloat(camp.gatilho).toFixed(2)}`
+                                                : `Na compra de +${camp.gatilho} un.`
+                                            }
+                                        </div>
+                                    </div>
+                                    <div style={styles.campanhaFooter}>
+                                        <span style={{display:'flex', alignItems:'center', gap:'5px'}}><FaTag /> Promoção</span>
+                                        <span style={{display:'flex', alignItems:'center', gap:'5px'}}><FaClock /> Expira {camp.validade}</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* BARRA DE CATEGORIAS */}
                 <div style={styles.categoryBar}>
                     <button 
                         onClick={() => setCatSelecionada('todos')} 

@@ -1,10 +1,10 @@
 import React, { useContext } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom'; // <--- IMPORTANTE PARA NAVEGAÇÃO
+// Removemos useNavigate e useLocation pois não vamos usar rotas aqui
 import Sidebar from '../shared/Sidebar'; 
 import { FaStore, FaBoxOpen, FaUserCog, FaShoppingCart, FaTrash } from 'react-icons/fa';
 import CartContext from '../../context/CartContext';
 
-// --- COMPONENTE INTERNO DO CARRINHO ---
+// --- COMPONENTE INTERNO DO CARRINHO (Mantive igualzinho o seu) ---
 const InternalCarrinho = ({ onCheckout }) => {
     const { cartItens, removerDoCart, cartTotal } = useContext(CartContext);
 
@@ -71,57 +71,54 @@ const InternalCarrinho = ({ onCheckout }) => {
     );
 };
 
-// --- COMPONENTE PRINCIPAL ---
-export default function SidebarLoja({ onCheckout }) {
-    const navigate = useNavigate(); // Hook para mudar a página
-    const location = useLocation(); // Hook para saber onde estamos
+// --- COMPONENTE PRINCIPAL ALTERADO ---
+// Agora recebemos 'setView' e 'activeView' do pai
+export default function SidebarLoja({ onCheckout, setView, activeView }) {
     
-    // Função auxiliar para verificar se a rota está ativa
-    // Verifica se a URL atual contém o caminho passado
-    const isActiveRoute = (routePath) => {
-        // Para a rota 'loja' (vitrine), consideramos ativo se for exatamente '/loja' ou '/loja/vitrine'
-        if (routePath === '/loja/vitrine') {
-            return location.pathname === '/loja' || location.pathname === '/loja/vitrine';
-        }
-        return location.pathname.includes(routePath);
+    // Função de estilo baseada na prop activeView
+    const menuItemStyle = (viewName) => {
+        const isActive = activeView === viewName;
+        return {
+            padding: '12px 15px', 
+            margin: '5px 0', 
+            borderRadius: '6px', 
+            cursor: 'pointer', 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '10px', 
+            color: 'white',
+            background: isActive ? 'rgba(255,255,255,0.2)' : 'transparent',
+            borderLeft: isActive ? '4px solid #00ff55' : '4px solid transparent',
+            transition: 'all 0.2s',
+            fontWeight: isActive ? 'bold' : 'normal'
+        };
     };
-
-    const menuItemStyle = (isActive) => ({
-        padding: '12px 15px', 
-        margin: '5px 0', 
-        borderRadius: '6px', 
-        cursor: 'pointer', 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: '10px', 
-        color: 'white',
-        background: isActive ? 'rgba(255,255,255,0.2)' : 'transparent',
-        borderLeft: isActive ? '4px solid #00ff55' : '4px solid transparent',
-        transition: 'all 0.2s',
-        fontWeight: isActive ? 'bold' : 'normal'
-    });
 
     return (
         <Sidebar title="ÁREA DO LOJISTA">
             {/* MENU DE NAVEGAÇÃO */}
             <div style={{ marginBottom: '30px', flex: 1 }}>
+                
+                {/* BOTÃO VITRINE */}
                 <div 
-                    style={menuItemStyle(isActiveRoute('/loja/vitrine'))} 
-                    onClick={() => navigate('/loja/vitrine')}
+                    style={menuItemStyle('vitrine')} 
+                    onClick={() => setView('vitrine')}
                 >
                     <FaStore /> Vitrine de Ofertas
                 </div>
+
+                {/* BOTÃO PEDIDOS */}
                 <div 
-                    style={menuItemStyle(isActiveRoute('/loja/meus-pedidos'))} 
-                    onClick={() => navigate('/loja/meus-pedidos')}
+                    style={menuItemStyle('pedidos')} 
+                    onClick={() => setView('pedidos')}
                 >
                     <FaBoxOpen /> Histórico de Pedidos
                 </div>
 
-                {/* ITEM: MEUS DADOS */}
+                {/* BOTÃO PERFIL */}
                 <div 
-                    style={menuItemStyle(isActiveRoute('/loja/perfil'))} 
-                    onClick={() => navigate('/loja/perfil')}
+                    style={menuItemStyle('perfil')} 
+                    onClick={() => setView('perfil')}
                 >
                     <FaUserCog /> Dados da Loja
                 </div>

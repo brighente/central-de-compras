@@ -1,38 +1,81 @@
 import React, { useContext, useState } from 'react';
-import { Outlet } from 'react-router-dom'; // <--- IMPORTANTE: Substitui a renderização condicional
 import AuthContext from '../../context/AuthContext';
 import CartContext from '../../context/CartContext';
 import { FaCheckCircle } from 'react-icons/fa';
 
-// Importando a Sidebar atualizada
+// Importando os componentes modularizados
 import SidebarLoja from './SidebarLoja';
+import LojaVitrine from './LojaVitrine';
+import LojaPedidos from './LojaPedidos';
+import LojaPerfil from './LojaPerfil'
+// Se tiver o componente de perfil, importe aqui. Ex: import LojaPerfil from './LojaPerfil';
 
 export default function LojaDashboard() {
     const { authState } = useContext(AuthContext);
     const { cartItens, limparCart, cartTotal } = useContext(CartContext);
 
-    // NÃO PRECISAMOS MAIS DO STATE 'view'. Quem controla isso agora é a URL.
+    // Navegação
+    const [view, setView] = useState('vitrine');
 
     // Estado do Modal de Checkout
     const [showCheckout, setShowCheckout] = useState(false);
+    
+    // ESTADO NOVO: Armazena as opções vindas do banco
+    const [opcoesPagamento, setOpcoesPagamento] = useState([]); 
     const [formaPagamento, setFormaPagamento] = useState('');
+    const [loadingPagamentos, setLoadingPagamentos] = useState(false);
 
     // --- HANDLERS ---
-    const handleOpenCheckout = () => {
+    const handleOpenCheckout = async () => {
         if(cartItens.length === 0) return alert("Seu carrinho está vazio.");
+
+        // 1. REGRA DE NEGÓCIO: Verificar se todos os itens são do mesmo fornecedor
+        const primeiroFornecedor = cartItens[0].produto.id_fornecedor;
+        const isMisto = cartItens.some(item => item.produto.id_fornecedor !== primeiroFornecedor);
+
+        if (isMisto) {
+            alert("Atenção: Seu carrinho contém produtos de fornecedores diferentes.\n\nPor favor, feche a compra de um fornecedor por vez.");
+            return;
+        }
+
         setShowCheckout(true);
+        setLoadingPagamentos(true);
+
+        // 2. BUSCAR AS FORMAS DE PAGAMENTO DO FORNECEDOR ESPECÍFICO
+        try {
+            const response = await fetch(`http://localhost:3001/api/condicoes/fornecedor/${primeiroFornecedor}/pagamentos`, {
+                headers: { 'Authorization': `Bearer ${authState.token}` }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                setOpcoesPagamento(data);
+            } else {
+                console.error("Erro ao buscar pagamentos");
+                setOpcoesPagamento([]);
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Erro de conexão ao buscar formas de pagamento.");
+        } finally {
+            setLoadingPagamentos(false);
+        }
     };
 
     const handleConfirmarPedido = async () => {
         if(!formaPagamento) return alert("Selecione uma forma de pagamento.");
 
         try {
+            const idFornecedor = cartItens[0].produto.id_fornecedor;
             const payload = {
+                id_fornecedor: idFornecedor,
                 itens: cartItens.map(item => ({
                     id_produto: item.produto.id,
-                    quantidade: item.quantidade
+                    quantidade: item.quantidade,
+                    valor_unitario: item.produto.valor_produto
                 })),
-                forma_pagamento: formaPagamento
+                forma_pagamento: formaPagamento,
+                vl_total: cartTotal
             };
 
             const res = await fetch('http://localhost:3001/api/pedidos', {
@@ -47,14 +90,28 @@ export default function LojaDashboard() {
             limparCart();
             setShowCheckout(false);
             setFormaPagamento('');
-            // Opcional: Redirecionar para pedidos via navigate('/loja/meus-pedidos') se quiser
+            setOpcoesPagamento([]);
+            setView('pedidos'); // Redireciona para o histórico
         } catch(err) {
             alert("Erro ao realizar pedido.");
             console.error(err);
         }
     };
 
-    // Estilos
+    // Função que decide o que mostrar na tela principal
+    const renderContent = () => {
+        switch (view) {
+            case 'vitrine':
+                return <LojaVitrine />;
+            case 'pedidos':
+                return <LojaPedidos />;
+            case 'perfil':
+                return <LojaPerfil />
+            default:
+                return <LojaVitrine />;
+        }
+    };
+
     const styles = {
         mainContainer: { flex: 1, backgroundColor: '#f4f6f8', minHeight: '100vh', display: 'flex' },
         contentArea: { flex: 1, padding: '30px', overflowY: 'auto', height: '100vh' },
@@ -65,15 +122,14 @@ export default function LojaDashboard() {
     return (
         <div style={styles.mainContainer}>
             
-            {/* SIDEBAR: Não passamos mais 'activeView' nem 'setView' */}
             <SidebarLoja 
-                onCheckout={handleOpenCheckout} 
+                activeView={view} 
+                setView={setView} 
+                onCheckout={handleOpenCheckout} // Passando a função correta de abrir o modal
             />
 
-            {/* ÁREA DE CONTEÚDO */}
             <div style={styles.contentArea}>
-                {/* O Outlet renderiza o componente filho da rota definida no App.jsx (Vitrine, Pedidos ou Perfil) */}
-                <Outlet />
+                {renderContent()}
             </div>
 
             {/* MODAL DE CHECKOUT */}
@@ -84,19 +140,31 @@ export default function LojaDashboard() {
                         
                         <div style={{marginBottom: '20px'}}>
                             <p style={{fontSize: '1.1rem'}}>Total: <strong style={{color: '#009933'}}>R$ {cartTotal.toFixed(2)}</strong></p>
-                            <label style={{fontSize: '0.9rem', color: '#666', display: 'block', marginBottom: '8px'}}>Forma de Pagamento:</label>
                             
-                            <select 
-                                style={{width: '100%', padding: '12px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '1rem', backgroundColor: '#fff'}}
-                                value={formaPagamento}
-                                onChange={(e) => setFormaPagamento(e.target.value)}
-                            >
-                                <option value="">Selecione...</option>
-                                <option value="Boleto Bancário (À vista)">Boleto Bancário (À vista)</option>
-                                <option value="Boleto 28 Dias">Boleto 28 Dias</option>
-                                <option value="Pix">Pix (Instantâneo)</option>
-                                <option value="Cartão de Crédito">Cartão de Crédito</option>
-                            </select>
+                            <label style={{fontSize: '0.9rem', color: '#666', display: 'block', marginBottom: '8px'}}>
+                                Forma de Pagamento Aceita pelo Fornecedor:
+                            </label>
+                            
+                            {loadingPagamentos ? (
+                                <p style={{fontSize:'0.8rem', color:'#666'}}>Carregando opções...</p>
+                            ) : (
+                                <select 
+                                    style={{width: '100%', padding: '12px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '1rem', backgroundColor: '#fff'}}
+                                    value={formaPagamento}
+                                    onChange={(e) => setFormaPagamento(e.target.value)}
+                                >
+                                    <option value="">Selecione...</option>
+                                    {opcoesPagamento.length > 0 ? (
+                                        opcoesPagamento.map(opcao => (
+                                            <option key={opcao.id} value={opcao.descricao}>
+                                                {opcao.descricao}
+                                            </option>
+                                        ))
+                                    ) : (
+                                        <option disabled>Nenhuma forma cadastrada pelo fornecedor</option>
+                                    )}
+                                </select>
+                            )}
                         </div>
 
                         <div style={{display: 'flex', gap: '10px', justifyContent: 'flex-end'}}>
