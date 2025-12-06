@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import Sidebar from '../shared/Sidebar'; 
 import { FaBoxOpen, FaShoppingCart, FaBullhorn, FaCogs, FaChevronDown, FaChevronUp, FaHome } from 'react-icons/fa';
 
-// AJUSTE AQUI: Recebendo 'aoClicar' (como o pai manda) e 'activeView' (para saber qual está ativa)
 export default function SidebarFornecedor({ activeView, aoClicar }) {
     
     const [openMenu, setOpenMenu] = useState('');
@@ -11,7 +10,6 @@ export default function SidebarFornecedor({ activeView, aoClicar }) {
         setOpenMenu(openMenu === menuName ? '' : menuName);
     };
 
-    // Função auxiliar para garantir que não quebre se o pai não mandar 'aoClicar'
     const handleNavigation = (viewName) => {
         if (typeof aoClicar === 'function') {
             aoClicar(viewName);
@@ -53,7 +51,6 @@ export default function SidebarFornecedor({ activeView, aoClicar }) {
     return (
         <Sidebar title="ÁREA DO FORNECEDOR">
             
-            {/* --- VISÃO GERAL --- */}
             <div 
                 style={menuItemStyle(activeView === 'dashboard')} 
                 onClick={() => handleNavigation('dashboard')}
@@ -63,7 +60,6 @@ export default function SidebarFornecedor({ activeView, aoClicar }) {
                 </div>
             </div>
 
-            {/* --- GESTÃO COMERCIAL (DROPDOWN) --- */}
             <div>
                 <div 
                     style={menuItemStyle(openMenu === 'comercial' || ['produtos', 'campanhas', 'configuracoes'].includes(activeView))} 
@@ -101,7 +97,6 @@ export default function SidebarFornecedor({ activeView, aoClicar }) {
                 )}
             </div>
 
-            {/* --- PEDIDOS --- */}
             <div 
                 style={menuItemStyle(activeView === 'pedidos')} 
                 onClick={() => handleNavigation('pedidos')}

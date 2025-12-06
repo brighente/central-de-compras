@@ -9,7 +9,6 @@ export default function FornecedorProdutos() {
     
     const [editandoId, setEditandoId] = useState(null); 
     
-    // Novo estado para o arquivo de imagem
     const [arquivoImagem, setArquivoImagem] = useState(null);
 
     const [prodForm, setProdForm] = useState({ 
@@ -18,7 +17,6 @@ export default function FornecedorProdutos() {
         id_categoria: '' 
     });
 
-    // Headers para GET e DELETE (JSON)
     const headers = { 'Authorization': `Bearer ${authState.token}` };
 
     useEffect(() => {
@@ -49,18 +47,15 @@ export default function FornecedorProdutos() {
                 method = 'PUT'; 
             }
 
-            // MUDANÇA CRUCIAL: Usar FormData para enviar arquivos
             const formData = new FormData();
             formData.append('produto', prodForm.produto);
             formData.append('valor_produto', prodForm.valor_produto);
             formData.append('id_categoria', prodForm.id_categoria);
             
-            // Só anexa se o usuário selecionou um arquivo
             if (arquivoImagem) {
                 formData.append('imagem', arquivoImagem);
             }
 
-            // Headers especias para FormData: NÃO setar 'Content-Type', o navegador faz isso sozinho com o boundary
             const uploadHeaders = {
                 'Authorization': `Bearer ${authState.token}`
             };
@@ -89,7 +84,7 @@ export default function FornecedorProdutos() {
             valor_produto: p.valor_produto,
             id_categoria: p.id_categoria
         });
-        setArquivoImagem(null); // Reseta o arquivo selecionado ao entrar em edição
+        setArquivoImagem(null);
     };
 
     const handleDeletar = async (id) => {
@@ -105,7 +100,6 @@ export default function FornecedorProdutos() {
         setEditandoId(null);
         setProdForm({ produto: '', valor_produto: '', id_categoria: '' });
         setArquivoImagem(null);
-        // Reseta o input file visualmente
         document.getElementById('fileInput').value = ""; 
     }
 
@@ -114,7 +108,6 @@ export default function FornecedorProdutos() {
 
     return (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '30px' }}>
-            {/* Form */}
             <div style={{ background: 'white', padding: '25px', borderRadius: '10px', boxShadow: '0 2px 5px rgba(0,0,0,0.05)', height: 'fit-content' }}>
                 <h2 style={{ marginTop: 0, color: '#333', fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
                     {editandoId ? <FaEdit /> : <FaPlus />} 
@@ -130,7 +123,6 @@ export default function FornecedorProdutos() {
                         {categorias.map(c => <option key={c.id} value={c.id}>{c.nome_categoria}</option>)}
                     </select>
 
-                    {/* Input de Imagem */}
                     <div>
                         <label style={{display:'block', marginBottom:'5px', fontSize:'0.9rem', color:'#666'}}>Imagem do Produto:</label>
                         <input 
@@ -154,7 +146,6 @@ export default function FornecedorProdutos() {
                 </form>
             </div>
 
-            {/* Lista */}
             <div style={{ background: 'white', padding: '25px', borderRadius: '10px', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
                 <h2 style={{ marginTop: 0, color: '#333', fontSize: '1.2rem', marginBottom: '20px' }}>Meu Catálogo</h2>
                 <table style={{width: '100%', borderCollapse: 'collapse'}}>

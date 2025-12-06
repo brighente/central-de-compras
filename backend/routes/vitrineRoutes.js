@@ -5,7 +5,6 @@ const authMiddleware = require('../authMiddleware');
 
 router.use(authMiddleware);
 
-// --- ROTA DE CATEGORIAS ---
 router.get('/categorias', async (req, res) => {
     try {
         const categorias = await db('tb_categoria')
@@ -20,10 +19,8 @@ router.get('/categorias', async (req, res) => {
     }
 });
 
-// --- ROTA PRINCIPAL DA VITRINE ---
 router.get('/', async (req, res) => {
     try {
-        // 1. Pega UF da loja (comprador)
         const dadosLoja = await db('tb_loja')
             .join('tb_loja_endereco', 'tb_loja.id', 'tb_loja_endereco.id_loja')
             .where('tb_loja.id_usuario', req.user.userId)
@@ -32,7 +29,6 @@ router.get('/', async (req, res) => {
 
         const ufComprador = (dadosLoja && dadosLoja.estado) ? dadosLoja.estado.trim().toUpperCase() : null;
 
-        // 2. Query Principal
         const produtos = await db('tb_fornecedor_produto as prod')
             .join('tb_fornecedor as forn', 'prod.id_fornecedor', 'forn.id')
             .join('tb_categoria as cat', 'prod.id_categoria', 'cat.id')
@@ -46,17 +42,15 @@ router.get('/', async (req, res) => {
                 'prod.valor_produto',
                 'prod.id_fornecedor',
                 'prod.id_categoria',
-                'prod.imagem as imagem_bruta', // Renomeei para evitar confusão na lógica abaixo
+                'prod.imagem as imagem_bruta',
                 'forn.nome_fantasia as fornecedor_nome',
                 'cat.nome_categoria',
                 'regra.acrescimo_desconto_unitario_valor'
             )
             .orderBy('forn.nome_fantasia');
 
-        // 3. Processamento dos dados (Cálculo de Preço + Tratamento de Imagem)
         const produtosCalculados = produtos.map(item => {
             
-            // --- CÁLCULO DE PREÇO ---
             const valorBase = parseFloat(item.valor_produto);
             let valorFinal = valorBase;
             let temRegra = false;
@@ -70,34 +64,25 @@ router.get('/', async (req, res) => {
                 }
             }
 
-            // --- LÓGICA DE TRATAMENTO DE IMAGEM ---
             let imgFinal = null;
             if (item.imagem_bruta) {
-                // Se for URL completa (ex: link externo), usa ela
                 if (item.imagem_bruta.startsWith('http')) {
                     imgFinal = item.imagem_bruta;
                 } else {
-                    // Se for caminho local salvo pelo Multer
-                    // 1. Corrige as barras invertidas do Windows
                     let pathCorrigido = item.imagem_bruta.replace(/\\/g, '/');
                     
-                    // 2. Remove barra inicial se tiver (ex: /uploads/foto.jpg -> uploads/foto.jpg)
                     if (pathCorrigido.startsWith('/')) {
                         pathCorrigido = pathCorrigido.substring(1);
                     }
 
-                    // 3. SE O BANCO SÓ SALVOU O NOME DO ARQUIVO (ex: "foto.jpg")
-                    // e não "uploads/foto.jpg", adiciona a pasta manualmente:
                     if (!pathCorrigido.includes('uploads/')) {
                          pathCorrigido = `uploads/${pathCorrigido}`;
                     }
 
-                    // Monta a URL final usando o protocolo e host do request atual
                     imgFinal = `${req.protocol}://${req.get('host')}/${pathCorrigido}`;
                 }
             }
 
-            // --- RETORNO DO OBJETO ---
             return {
                 id: item.id,
                 id_fornecedor: item.id_fornecedor,
@@ -109,7 +94,7 @@ router.get('/', async (req, res) => {
                 valor_final: valorFinal,
                 regra_aplicada: temRegra,
                 uf_usuario: ufComprador,
-                imagemUrl: imgFinal // Campo que o Frontend espera
+                imagemUrl: imgFinal 
             };
         });
 

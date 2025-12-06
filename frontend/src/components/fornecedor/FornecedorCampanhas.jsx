@@ -6,13 +6,12 @@ export default function FornecedorCampanhas() {
     const { authState } = useContext(AuthContext);
     const [campanhas, setCampanhas] = useState([]);
     
-    // Estado para controlar o modal de edição
     const [editando, setEditando] = useState(null);
 
-    // Estado do formulário de criação (Nova Campanha)
+
     const [form, setForm] = useState({ 
         descricao: '', 
-        tipo_regra: 'VALOR', // VALOR ou QUANTIDADE
+        tipo_regra: 'VALOR',
         gatilho: '',         
         desconto_percentual: '',
         dias_duracao: 7 
@@ -29,13 +28,11 @@ export default function FornecedorCampanhas() {
         fetch('http://localhost:3001/api/campanhas/fornecedor', { headers })
             .then(r => r.json())
             .then(data => {
-                // Garante que seja um array para não quebrar o map
                 setCampanhas(Array.isArray(data) ? data : []);
             })
             .catch(console.error);
     };
 
-    // --- CRIAR ---
     const handleSalvar = async (e) => {
         e.preventDefault();
         try {
@@ -53,26 +50,20 @@ export default function FornecedorCampanhas() {
         } catch(err) { alert('Erro ao salvar'); }
     };
 
-    // --- PREPARAR EDIÇÃO ---
     const abrirEdicao = (campanha) => {
-        // O backend já está retornando os campos formatados (descricao, tipo_regra, gatilho, desconto_percentual, dias_duracao)
-        // Apenas garantimos que os valores sejam convertidos para string ou número corretamente.
         setEditando({
             id: campanha.id,
             descricao: campanha.descricao,
             tipo_regra: campanha.tipo_regra,
-            // Garante que gatilho e desconto sejam tratados como string para o input type="number"
             gatilho: String(campanha.gatilho || ''), 
             desconto_percentual: String(campanha.desconto_percentual || ''),
             dias_duracao: String(campanha.dias_duracao || 7)
         });
     };
 
-    // --- SALVAR EDIÇÃO (PUT) ---
     const salvarEdicao = async () => {
         if (!editando) return;
 
-        // Garante que o gatilho e desconto sejam números (o input já deveria garantir isso)
         const bodyToSend = {
             ...editando,
             gatilho: parseFloat(editando.gatilho),
@@ -84,13 +75,13 @@ export default function FornecedorCampanhas() {
             const res = await fetch(`http://localhost:3001/api/campanhas/${editando.id}`, {
                 method: 'PUT',
                 headers,
-                body: JSON.stringify(bodyToSend) // Usa o body sanitizado
+                body: JSON.stringify(bodyToSend) 
             });
 
             if (res.ok) {
                 alert('Campanha atualizada!');
-                setEditando(null); // Fecha o modal
-                fetchCampanhas();  // Atualiza a lista
+                setEditando(null); 
+                fetchCampanhas();  
             } else {
                 const err = await res.json();
                 alert('Erro ao atualizar: ' + (err.message || 'Erro desconhecido'));
@@ -101,22 +92,18 @@ export default function FornecedorCampanhas() {
         }
     };
 
-    // --- EXCLUIR ---
     const handleExcluir = async (id) => {
         if(!confirm('Remover campanha?')) return;
         await fetch(`http://localhost:3001/api/campanhas/${id}`, { method: 'DELETE', headers });
         fetchCampanhas();
     };
 
-    // Função genérica para lidar com a mudança nos inputs de edição
     const handleEditChange = (e) => {
         setEditando({...editando, [e.target.name]: e.target.value});
     };
-    // Função para lidar com a mudança no campo de gatilho
     const handleEditGatilhoChange = (e) => {
         setEditando({...editando, gatilho: e.target.value});
     };
-    // Função para lidar com a mudança no campo de desconto
     const handleEditDescontoChange = (e) => {
         setEditando({...editando, desconto_percentual: e.target.value});
     };
@@ -178,11 +165,9 @@ export default function FornecedorCampanhas() {
                                 <span style={{background:'#d4edda', color:'#155724', padding:'5px 10px', borderRadius:'15px', fontWeight:'bold'}}>
                                     <FaPercentage size={10}/> {c.desconto_percentual}%
                                 </span>
-                                {/* Botão Editar */}
                                 <button onClick={() => abrirEdicao(c)} style={{background:'transparent', border:'none', color:'#007bff', cursor:'pointer'}} title="Editar">
                                     <FaEdit size={18} />
                                 </button>
-                                {/* Botão Excluir */}
                                 <button onClick={() => handleExcluir(c.id)} style={{background:'transparent', border:'none', color:'#dc3545', cursor:'pointer'}} title="Excluir">
                                     <FaTrash size={16} />
                                 </button>
@@ -192,7 +177,6 @@ export default function FornecedorCampanhas() {
                 </div>
             </div>
 
-            {/* --- MODAL DE EDIÇÃO --- */}
             {editando && (
                 <div style={{
                     position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,

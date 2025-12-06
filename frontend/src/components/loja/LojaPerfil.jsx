@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { FaTrash, FaPlus, FaSave } from 'react-icons/fa';
-import { IMaskInput } from 'react-imask'; // <--- MUDANÇA AQUI
+import { IMaskInput } from 'react-imask';
 import AuthContext from '../../context/AuthContext';
 
-// Lista de estados para o select
 const estados = [
   'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 
   'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 
@@ -86,7 +85,6 @@ export default function PerfilLoja() {
     const handleSave = async () => {
         setLoading(true);
         try {
-            // LIMPEZA: Remove formatação antes de enviar
             const lojaParaSalvar = {
                 ...loja,
                 cnpj: loja.cnpj.replace(/\D/g, ''),
@@ -130,7 +128,6 @@ export default function PerfilLoja() {
         }
     };
 
-    // Estilos
     const inputStyle = {
         width: '100%',
         padding: '10px',
@@ -171,7 +168,6 @@ export default function PerfilLoja() {
 
                     <div>
                         <label style={labelStyle}>CNPJ</label>
-                        {/* MÁSCARA NOVA: Usa '0' para números */}
                         <IMaskInput
                             mask="00.000.000/0000-00"
                             name="cnpj" 
@@ -204,7 +200,6 @@ export default function PerfilLoja() {
 
                     <div>
                         <label style={labelStyle}>CEP</label>
-                        {/* MÁSCARA NOVA */}
                         <IMaskInput
                             mask="00000-000"
                             name="cep" 

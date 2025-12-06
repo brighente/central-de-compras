@@ -9,7 +9,7 @@ const fs = require('fs');
 
 router.use(authMiddleware);
 
-// --- Configuração do Upload (Multer) ---
+
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         const uploadPath = 'uploads/';
@@ -25,7 +25,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({ 
     storage: storage,
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+    limits: { fileSize: 5 * 1024 * 1024 }, 
     fileFilter: (req, file, cb) => {
         const filetypes = /jpeg|jpg|png|webp/;
         const mimetype = filetypes.test(file.mimetype);
@@ -42,14 +42,9 @@ const gerarSenhaProvisoria = () => {
     return Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8);
 }
 
-// 🎯 Função para remover caracteres não numéricos de campos mascarados
 const sanitizeMaskedField = (value) => {
     return value ? value.replace(/\D/g, '') : null;
 };
-
-// =========================================
-// ROTAS DE AUXILIARES (GET)
-// =========================================
 
 router.get('/lista-fornecedores', async (req, res) => {
     try {
@@ -68,10 +63,6 @@ router.get('/lista-categorias', async (req, res) => {
         res.status(500).json({ message: 'Erro ao listar categorias' });
     }
 });
-
-// =========================================
-// ROTAS DE CADASTRO (POST)
-// =========================================
 
 router.post('/loja', async (req, res) => {
     let {
@@ -231,9 +222,8 @@ router.post('/fornecedor', async (req, res) => {
     }
 });
 
-// ✅ ATUALIZADO: Agora suporta upload de imagem (POST)
+
 router.post('/produtos', upload.single('imagem'), async (req, res) => {
-    // Com multer, usa req.body para textos e req.file para o arquivo
     const { produto, valor_produto, id_categoria, id_fornecedor } = req.body;
     const imagem = req.file ? req.file.filename : null;
 
@@ -249,7 +239,7 @@ router.post('/produtos', upload.single('imagem'), async (req, res) => {
             id_categoria,
             produto,
             valor_produto,
-            imagem // Salva o nome do arquivo
+            imagem
         });
 
         res.status(201).json({ message: 'Produto cadastrado com sucesso' });
@@ -260,9 +250,6 @@ router.post('/produtos', upload.single('imagem'), async (req, res) => {
 });
 
 
-// =========================================
-// ROTAS DE LISTAGEM (GET)
-// =========================================
 
 router.get('/lojas', async (req, res) => {
     try {
@@ -319,7 +306,6 @@ router.get('/produtos', async (req, res) => {
                 'tb_categoria.nome_categoria'
             );
 
-        // Opcional: Adicionar URL completa da imagem para o front
         const produtosComUrl = produtos.map(p => ({
             ...p,
             imagemUrl: p.imagem ? `http://localhost:3001/uploads/${p.imagem}` : null
@@ -331,10 +317,6 @@ router.get('/produtos', async (req, res) => {
     }
 });
 
-
-// =========================================
-// ROTAS DE EDIÇÃO (PUT)
-// =========================================
 
 router.put('/loja/:id', async (req, res) => {
     const { id } = req.params;
@@ -384,14 +366,12 @@ router.put('/fornecedor/:id', async (req, res) => {
     }
 });
 
-// ✅ ATUALIZADO: Agora suporta upload de imagem na edição (PUT)
 router.put('/produto/:id', upload.single('imagem'), async (req, res) => {
     const { id } = req.params;
     const { produto, valor_produto, id_categoria, id_fornecedor } = req.body;
     const novaImagem = req.file ? req.file.filename : undefined;
 
     try {
-        // Busca produto antigo para ver se tem imagem para deletar
         const produtoAntigo = await db('tb_fornecedor_produto').where({ id }).first();
 
         const updateData = {
@@ -404,7 +384,6 @@ router.put('/produto/:id', upload.single('imagem'), async (req, res) => {
         if (novaImagem) {
             updateData.imagem = novaImagem;
             
-            // Se existia imagem antiga, deleta o arquivo físico
             if (produtoAntigo && produtoAntigo.imagem) {
                 const caminhoAntigo = path.join('uploads', produtoAntigo.imagem);
                 if (fs.existsSync(caminhoAntigo)) {
@@ -420,10 +399,6 @@ router.put('/produto/:id', upload.single('imagem'), async (req, res) => {
         res.status(500).json({ message: 'Erro ao atualizar produto.' });
     }
 });
-
-// =========================================
-// ROTAS DE EXCLUSÃO (DELETE)
-// =========================================
 
 router.delete('/loja/:id', async (req, res) => {
     const { id } = req.params;
@@ -473,7 +448,6 @@ router.delete('/fornecedor/:id', async (req, res) => {
             const produtos = await trx('tb_fornecedor_produto').where({ id_fornecedor: id }).select('id', 'imagem');
             const idsProdutos = produtos.map(p => p.id);
 
-            // Deleta arquivos físicos das imagens dos produtos
             produtos.forEach(prod => {
                 if (prod.imagem) {
                     const caminho = path.join('uploads', prod.imagem);
@@ -507,22 +481,17 @@ router.delete('/fornecedor/:id', async (req, res) => {
     });
 });
 
-// ✅ ATUALIZADO: Remove arquivo físico na exclusão do produto
 router.delete('/produto/:id', async (req, res) => {
     const { id } = req.params;
     
     await db.transaction(async (trx) => {
         try {
-            // Busca dados do produto para pegar o nome da imagem antes de deletar
             const produto = await trx('tb_fornecedor_produto').where({ id }).first();
 
-            // 1. Remove este produto de qualquer pedido existente
             await trx('tb_pedido_item').where({ id_produto: id }).del();
 
-            // 2. Remove o produto
             await trx('tb_fornecedor_produto').where({ id }).del();
 
-            // 3. Se deu certo no banco, apaga o arquivo físico
             if (produto && produto.imagem) {
                 const caminhoArquivo = path.join('uploads', produto.imagem);
                 if (fs.existsSync(caminhoArquivo)) {

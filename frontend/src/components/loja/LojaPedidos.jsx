@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import AuthContext from '../../context/AuthContext';
-import { FaClock, FaExclamationTriangle, FaCheckCircle } from 'react-icons/fa'; // Instale: npm install react-icons
+import { FaClock, FaExclamationTriangle, FaCheckCircle } from 'react-icons/fa'; 
 
 export default function LojaPedidos() {
     const { authState } = useContext(AuthContext);
@@ -30,9 +30,7 @@ export default function LojaPedidos() {
         return styles[status] || { bg: '#f8f9fa', color: '#333', border: '#ddd' };
     };
 
-    // --- NOVO: Componente para calcular e exibir o prazo ---
     const PrazoBadge = ({ dataPedido, diasPrazo, status }) => {
-        // Se não tem regra de dias ou o pedido já foi cancelado/finalizado, não mostra nada
         if (!diasPrazo || status === 'CANCELADO') return null;
 
         const dataInicio = new Date(dataPedido);
@@ -40,7 +38,6 @@ export default function LojaPedidos() {
         dataLimite.setDate(dataLimite.getDate() + parseInt(diasPrazo));
         
         const hoje = new Date();
-        // Diferença em milissegundos convertida para dias
         const diffTempo = dataLimite - hoje;
         const diasRestantes = Math.ceil(diffTempo / (1000 * 60 * 60 * 24));
 
@@ -53,11 +50,11 @@ export default function LojaPedidos() {
             texto = `Prazo expirou em ${dataLimite.toLocaleDateString()}`;
             icone = <FaExclamationTriangle />;
         } else if (diasRestantes <= 3) {
-            estilo = { bg: '#fff8e1', color: '#ff8f00', border: '#ffe082' }; // Amarelo/Laranja alerta
+            estilo = { bg: '#fff8e1', color: '#ff8f00', border: '#ffe082' };
             texto = `Vence em ${diasRestantes} dia(s) (${dataLimite.toLocaleDateString()})`;
             icone = <FaClock />;
         } else {
-            estilo = { bg: '#e8f5e9', color: '#2e7d32', border: '#a5d6a7' }; // Verde tranquilo
+            estilo = { bg: '#e8f5e9', color: '#2e7d32', border: '#a5d6a7' }; 
             texto = `Vencimento: ${dataLimite.toLocaleDateString()}`;
             icone = <FaCheckCircle />;
         }
@@ -120,7 +117,6 @@ export default function LojaPedidos() {
                                     </div>
                                 </div>
                                 
-                                {/* AVISO DE PRAZO DE PAGAMENTO - VISÍVEL APENAS SE PENDENTE */}
                                 {pedido.status === 'PENDENTE' && (
                                     <PrazoBadge 
                                         dataPedido={pedido.dt_inc} 

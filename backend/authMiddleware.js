@@ -9,14 +9,14 @@ const authMiddleware = (req, res, next) => {
         return res.status(401).json({message: 'Acesso Negado! Nenhum token foi fornecido.'});
     }
 
-    const token = authHeader.split(' ')[1]; // Pega o token que fica depois do 'Bearer '
+    const token = authHeader.split(' ')[1]; // Pega o toke que fica depois do 'Bearer '
 
     try{
         const decoded = jwt.verify(token, JWT_SECRET); // Valida o token a partir do JWT_SECRET
 
-        req.user = decoded; // Com o token decodificado, os dados do usuário são anexados na requisição para a próxima rota saber quem é o user
+        req.user = decoded; // Com o token decodificado, os dados do usuário são anexados na requisição para a próxima rota sabe quem é o user
 
-        next(); // Faz a requisição passar para a rota final
+        next(); 
     } catch(err){
         res.status(401).json({message: 'Token Inválido'});
     }

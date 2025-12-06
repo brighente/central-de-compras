@@ -2,7 +2,6 @@ import React, { useState, useEffect, useContext } from 'react';
 import AuthContext from '../../context/AuthContext';
 import { FaMoneyBillWave, FaClock, FaBoxOpen } from 'react-icons/fa';
 
-// Card Reutilizável
 const CardInfo = ({ titulo, valor, cor, icone }) => (
     <div style={{ backgroundColor: 'white', padding: '25px', borderRadius: '8px', borderLeft: `5px solid ${cor}`, boxShadow: '0 2px 5px rgba(0,0,0,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>

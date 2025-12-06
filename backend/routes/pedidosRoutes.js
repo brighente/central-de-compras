@@ -125,13 +125,12 @@ router.get('/fornecedor', async (req, res) => {
     console.log(`LOG: Buscando pedidos para o usuário ${idUsuarioLogado}`);
 
     try{
-        const fornecedor = await db('tb_fornecedor').where({id_usuario: idUsuarioLogado}).first(); // Seleciona o fornecedor baseado no idLogado
+        const fornecedor = await db('tb_fornecedor').where({id_usuario: idUsuarioLogado}).first();
 
         if(!fornecedor){
             return res.status(404).json({message: 'Fornecedor não encontrado'})
         }
 
-        // Dados de pedidos vindos do banco
         const pedidos = await db('tb_pedido AS ped')
             .join('tb_loja AS loja', 'ped.id_loja', 'loja.id' )
             .where('ped.id_fornecedor', fornecedor.id)
@@ -152,7 +151,6 @@ router.get('/fornecedor', async (req, res) => {
             return p.id
         });
 
-        // Pega os itens do pedido
         const itens = await db('tb_pedido_item AS pi')
             .join('tb_fornecedor_produto AS prod', 'pi.id_produto', 'prod.id')
             .join('tb_categoria AS cat', 'prod.id_categoria', 'cat.id')
@@ -167,7 +165,6 @@ router.get('/fornecedor', async (req, res) => {
                 'cb.vl_previsto AS cashback_fornecido'
             );
 
-        // Junta os pedidos com seus itens em um array completo
         const pedidosComItens = pedidos.map( (pedido) => {
             return {
                 ...pedido,
@@ -187,7 +184,6 @@ router.get('/loja', async (req, res) => {
     const idUsuarioLogado = req.user.userId;
 
     try {
-        // 1. Busca a loja e o ESTADO dela (necessário para saber qual regra se aplica)
         const loja = await db('tb_loja')
             .join('tb_loja_endereco', 'tb_loja.id', 'tb_loja_endereco.id_loja')
             .where({ 'tb_loja.id_usuario': idUsuarioLogado })
@@ -198,24 +194,22 @@ router.get('/loja', async (req, res) => {
             return res.status(404).json({ message: 'Loja não encontrada.' });
         }
 
-        // 2. Busca os pedidos trazendo o PRAZO da regra do estado
         const pedidos = await db('tb_pedido AS ped')
             .join('tb_fornecedor AS forn', 'ped.id_fornecedor', 'forn.id')
             .leftJoin('tb_loja_cashback AS cb', 'ped.id', 'cb.id_pedido')
-            // JOIN para pegar a regra de prazo baseada no estado da loja
             .leftJoin('tb_fornecedor_condicao_estado as regra', function() {
                 this.on('regra.id_fornecedor', '=', 'forn.id')
-                    .andOnVal('regra.estado', '=', loja.estado) // O Knex compara com o estado da loja
+                    .andOnVal('regra.estado', '=', loja.estado)
             })
             .where('ped.id_loja', loja.id)
             .select(
                 'ped.id',
-                'ped.dt_inc', // Data do pedido
+                'ped.dt_inc', 
                 'ped.status',
                 'ped.vl_total_pedido',
                 'forn.nome_fantasia AS fornecedor_nome',
                 'cb.vl_previsto as cashback_ganho',
-                'regra.prazo_pagamento_dias' // <--- O CAMPO NOVO QUE PRECISAMOS
+                'regra.prazo_pagamento_dias' 
             )
             .orderBy('ped.id', 'desc');
 

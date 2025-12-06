@@ -1,12 +1,10 @@
-// ... (imports permanecem iguais)
 import React, { useState, useContext, useEffect } from 'react';
 import AuthContext from '../../context/AuthContext';
 import SidebarAdmin from './SidebarAdmin';
 import { FaTrash, FaEdit, FaTimes, FaCheckCircle, FaCopy } from 'react-icons/fa';
-import { IMaskInput } from 'react-imask'; // Importação do IMaskInput
+import { IMaskInput } from 'react-imask'; 
 
 export default function AdminDashboard(){
-    // ... (Estados, initialFormState e useEffects permanecem iguais)
     const { logout, authState } = useContext(AuthContext);
     
     const [aba, setAba] = useState('loja'); 
@@ -58,26 +56,20 @@ export default function AdminDashboard(){
     }, [aba, authState.token]);
 
 
-    // 🎯 FUNÇÃO CORRIGIDA: Garante que todos os campos sejam preenchidos
     const handleEdit = (item) => {
         setEditandoId(item.id);
         setResultado(null);
         setCredenciaisGeradas(null); 
         setArquivoAdmin(null);
 
-        // 1. Cria um objeto base que preenche todos os campos definidos em initialFormState
         const baseForm = {
-            // Usa o item como base, garantindo que nome_fantasia, razao_social, etc. sejam preenchidos.
             ...item, 
             
-            // Tratamento de campos que podem ser nulos no DB ou precisam de conversão:
             
-            // Campos mascarados (IMaskInput) devem aceitar o valor puro do DB:
             cnpj: item.cnpj || '',
             telefone: item.telefone || '',
             cep: item.cep || '',
             
-            // Campos de texto que podem ser nulos
             nome_fantasia: item.nome_fantasia || '',
             razao_social: item.razao_social || '',
             logradouro: item.logradouro || '',
@@ -86,20 +78,16 @@ export default function AdminDashboard(){
             cidade: item.cidade || '',
             estado: item.estado || 'SC', 
 
-            // Campos específicos de Produto
             produto: item.produto || '',
             
-            // Trata valores numéricos para o campo de texto (input type="number")
             valor_produto: item.valor_produto ? String(parseFloat(item.valor_produto).toFixed(2)) : '',
 
-            // Trata chaves estrangeiras (IDs) para preencher o <select> (sempre como string)
             id_categoria: item.id_categoria ? String(item.id_categoria) : '',
             id_fornecedor: item.id_fornecedor ? String(item.id_fornecedor) : ''
         };
         
         setForm(baseForm);
 
-        // Muda para a aba do formulário correspondente
         if(aba === 'lista_loja') setAba('loja');
         if(aba === 'lista_fornecedor') setAba('fornecedor');
         if(aba === 'lista_produto') setAba('produto');
@@ -116,13 +104,10 @@ export default function AdminDashboard(){
     };
 
     const handleMaskChange = (value, name) => {
-        // 'value' aqui é o valor sem a máscara (apenas números)
         setForm(prev => ({ ...prev, [name]: value }));
     };
 
-    // ... (handleDelete e handleSubmit permanecem iguais)
     const handleDelete = async (id) => {
-        // ... (lógica de exclusão)
         const confirmacao1 = window.confirm(
             "⚠️ PERIGO: Você tem certeza que deseja excluir este registro?\n\n" +
             "Isso forçará a exclusão de TODOS os dados vinculados.\n\n" +
@@ -171,7 +156,6 @@ export default function AdminDashboard(){
         if (formToSend.cep) formToSend.cep = formToSend.cep.replace(/\D/g, '');
         if (formToSend.telefone) formToSend.telefone = formToSend.telefone.replace(/\D/g, '');
 
-        // A variável 'method' não estava definida, a lógica correta está abaixo nas options
         if(editandoId) {
             if(aba === 'loja') url += `/loja/${editandoId}`;
             else if(aba === 'fornecedor') url += `/fornecedor/${editandoId}`;
@@ -213,7 +197,6 @@ export default function AdminDashboard(){
                 setResultado(data);
         
                 if(!editandoId) {
-                    // CADASTRAR (NOVO)
                     if (data.credenciais) {
                         setCredenciaisGeradas({
                             email: data.credenciais.usuario,
@@ -223,20 +206,14 @@ export default function AdminDashboard(){
                     setForm(initialFormState); 
                     setArquivoAdmin(null); 
                     if (document.getElementById('adminFileInput')) document.getElementById('adminFileInput').value = "";
-                    alert('Cadastro realizado com sucesso!'); // Feedback visual simples
+                    alert('Cadastro realizado com sucesso!');
                 } else {
-                    // EDITAR (EXISTENTE)
-                    // === AQUI ESTAVA O ERRO ===
-                    // Antes estava: alert('Erro: ' + data.message);
                     alert('Sucesso: ' + (data.message || 'Registro atualizado!'));
                     
-                    // Sugestão: Sair do modo de edição e limpar
                     setEditandoId(null);
                     setForm(initialFormState);
                 }
             } else {
-                // === IMPORTANTE ===
-                // Se res.ok for false, aí sim é um erro real vindo do backend
                 alert('Erro: ' + (data.message || 'Falha na operação'));
             }
         } catch(err) {
@@ -249,11 +226,9 @@ export default function AdminDashboard(){
 
     return (
         <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f4f6f8' }}>
-            {/* ... (Sidebar Admin) */}
             <SidebarAdmin aoClicar={(novaAba) => { setAba(novaAba); setEditandoId(null); setForm(initialFormState); }} onLogout={logout} />
 
             <div style={{ flex: 1, padding: '40px' }}>
-                {/* ... (Título e botão Cancelar Edição) */}
                 <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom: '30px'}}>
                     <h1 style={{ color: '#333', fontSize: '2rem', margin: 0 }}>
                         {editandoId ? `Editando ${aba.toUpperCase()}` : (aba.includes('lista') ? 'Gerenciar Registros' : `Cadastro de ${aba.charAt(0).toUpperCase() + aba.slice(1)}`)}
@@ -265,7 +240,6 @@ export default function AdminDashboard(){
                     )}
                 </div>
 
-                {/* (Componente de credenciais permanece igual) */}
                 {credenciaisGeradas && (
                     <div style={{
                         backgroundColor: '#d4edda', 
@@ -296,7 +270,6 @@ export default function AdminDashboard(){
                     </div>
                 )}
 
-                {/* (Tabela permanece igual) */}
                 {aba.startsWith('lista_') ? (
                     <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -347,7 +320,6 @@ export default function AdminDashboard(){
                         </table>
                     </div>
                 ) : (
-                    /* === FORMULÁRIO (COMPARTILHADO CADASTRO/EDIÇÃO) === */
                     <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
                         <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                             
@@ -355,7 +327,6 @@ export default function AdminDashboard(){
                                 <>
                                     <div style={{ gridColumn: '1 / -1', fontWeight: 'bold', color: 'var(--cor-primary)', borderBottom: '1px solid #eee', paddingBottom: '5px', marginBottom: '5px' }}>DADOS GERAIS</div>
                                     
-                                    {/* CNPJ - IMaskInput */}
                                     <div>
                                         <label style={labelStyle}>CNPJ</label>
                                         <IMaskInput 
@@ -373,7 +344,6 @@ export default function AdminDashboard(){
                                     <div><label style={labelStyle}>Nome Fantasia</label><input name="nome_fantasia" value={form.nome_fantasia} onChange={handleChange} style={inputStyle} required/></div>
                                     <div><label style={labelStyle}>Razão Social</label><input name="razao_social" value={form.razao_social} onChange={handleChange} style={inputStyle} required/></div>
                                     
-                                    {/* TELEFONE - IMaskInput (Máscara Dinâmica) */}
                                     <div>
                                         <label style={labelStyle}>Telefone</label>
                                         <IMaskInput
@@ -396,7 +366,6 @@ export default function AdminDashboard(){
 
                                     <div style={{ gridColumn: '1 / -1', fontWeight: 'bold', color: 'var(--cor-primary)', marginTop: '15px', borderBottom: '1px solid #eee', paddingBottom: '5px', marginBottom: '5px' }}>ENDEREÇO</div>
                                     
-                                    {/* CEP - IMaskInput */}
                                     <div>
                                         <label style={labelStyle}>CEP</label>
                                         <IMaskInput 
@@ -468,7 +437,6 @@ export default function AdminDashboard(){
     );
 }
 
-// ... (Estilos permanecem iguais)
 const thStyle = { padding: '10px', color: '#555', borderBottom: '2px solid #eee', fontSize: '0.9rem' };
 const tdStyle = { padding: '10px', color: '#333', fontSize: '0.9rem' };
 

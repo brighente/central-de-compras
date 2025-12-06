@@ -3,33 +3,26 @@ import AuthContext from '../../context/AuthContext';
 import CartContext from '../../context/CartContext';
 import { FaCheckCircle } from 'react-icons/fa';
 
-// Importando os componentes modularizados
 import SidebarLoja from './SidebarLoja';
 import LojaVitrine from './LojaVitrine';
 import LojaPedidos from './LojaPedidos';
 import LojaPerfil from './LojaPerfil'
-// Se tiver o componente de perfil, importe aqui. Ex: import LojaPerfil from './LojaPerfil';
 
 export default function LojaDashboard() {
     const { authState } = useContext(AuthContext);
     const { cartItens, limparCart, cartTotal } = useContext(CartContext);
 
-    // Navegação
     const [view, setView] = useState('vitrine');
 
-    // Estado do Modal de Checkout
     const [showCheckout, setShowCheckout] = useState(false);
     
-    // ESTADO NOVO: Armazena as opções vindas do banco
     const [opcoesPagamento, setOpcoesPagamento] = useState([]); 
     const [formaPagamento, setFormaPagamento] = useState('');
     const [loadingPagamentos, setLoadingPagamentos] = useState(false);
 
-    // --- HANDLERS ---
     const handleOpenCheckout = async () => {
         if(cartItens.length === 0) return alert("Seu carrinho está vazio.");
 
-        // 1. REGRA DE NEGÓCIO: Verificar se todos os itens são do mesmo fornecedor
         const primeiroFornecedor = cartItens[0].produto.id_fornecedor;
         const isMisto = cartItens.some(item => item.produto.id_fornecedor !== primeiroFornecedor);
 
@@ -41,7 +34,6 @@ export default function LojaDashboard() {
         setShowCheckout(true);
         setLoadingPagamentos(true);
 
-        // 2. BUSCAR AS FORMAS DE PAGAMENTO DO FORNECEDOR ESPECÍFICO
         try {
             const response = await fetch(`http://localhost:3001/api/condicoes/fornecedor/${primeiroFornecedor}/pagamentos`, {
                 headers: { 'Authorization': `Bearer ${authState.token}` }
@@ -91,14 +83,13 @@ export default function LojaDashboard() {
             setShowCheckout(false);
             setFormaPagamento('');
             setOpcoesPagamento([]);
-            setView('pedidos'); // Redireciona para o histórico
+            setView('pedidos'); 
         } catch(err) {
             alert("Erro ao realizar pedido.");
             console.error(err);
         }
     };
 
-    // Função que decide o que mostrar na tela principal
     const renderContent = () => {
         switch (view) {
             case 'vitrine':
@@ -125,14 +116,13 @@ export default function LojaDashboard() {
             <SidebarLoja 
                 activeView={view} 
                 setView={setView} 
-                onCheckout={handleOpenCheckout} // Passando a função correta de abrir o modal
+                onCheckout={handleOpenCheckout}
             />
 
             <div style={styles.contentArea}>
                 {renderContent()}
             </div>
 
-            {/* MODAL DE CHECKOUT */}
             {showCheckout && (
                 <div style={styles.modalOverlay}>
                     <div style={styles.modalContent}>

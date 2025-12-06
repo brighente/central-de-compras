@@ -19,7 +19,7 @@ import LojaPedidos from './components/loja/LojaPedidos';
 import PerfilLoja from './components/loja/LojaPerfil';
 
 import AuthContext from './context/AuthContext';
-import { CartProvider } from './context/CartContext'; // <--- IMPORTANTE
+import { CartProvider } from './context/CartContext';
 
 const RotaPrivada = ({ children, perfilPermitido }) => {
     const { authState, loading } = useContext(AuthContext);
@@ -53,16 +53,12 @@ function App(){
 
     return (
         <div className='App'>
-            {/* O CartProvider envolve as rotas para que o carrinho funcione na Loja */}
             <CartProvider>
                 <Routes>
-                    {/* Rota de login (pública) */}
                     <Route path="/login" element={!authState?.user ? <LoginPage /> : <Navigate to="/" />} />
 
-                    {/* Rota de troca de senha */}
                     <Route path="/trocar-senha" element={<TrocarSenha />} />
 
-                    {/* Rotas dos dashboards (privados) */}
                     <Route path="/admin" element={
                         <RotaPrivada perfilPermitido="ADMIN">
                             <AdminDashboard />
@@ -94,7 +90,6 @@ function App(){
                     
                     </Route>
 
-                    {/* Rota Raiz */}
                     <Route path="/" element={
                         authState?.user ? (
                             <Navigate to={`/${authState.user.perfil.toLowerCase()}`} />
@@ -103,7 +98,6 @@ function App(){
                         )
                     } />
 
-                    {/* Rota Coringa */}
                     <Route path="*" element={<Navigate to="/login" />} />
                 </Routes>
             </CartProvider>
