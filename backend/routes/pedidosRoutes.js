@@ -187,28 +187,39 @@ router.get('/loja', async (req, res) => {
     const idUsuarioLogado = req.user.userId;
 
     try {
-        const loja = await db('tb_loja').where({ id_usuario: idUsuarioLogado }).first();
+        // 1. Busca a loja e o ESTADO dela (necessário para saber qual regra se aplica)
+        const loja = await db('tb_loja')
+            .join('tb_loja_endereco', 'tb_loja.id', 'tb_loja_endereco.id_loja')
+            .where({ 'tb_loja.id_usuario': idUsuarioLogado })
+            .select('tb_loja.id', 'tb_loja_endereco.estado')
+            .first();
 
-        if(!loja){
-            return res.status(404).json({ message: 'Loja não encontrada.'});
-
+        if (!loja) {
+            return res.status(404).json({ message: 'Loja não encontrada.' });
         }
 
+        // 2. Busca os pedidos trazendo o PRAZO da regra do estado
         const pedidos = await db('tb_pedido AS ped')
             .join('tb_fornecedor AS forn', 'ped.id_fornecedor', 'forn.id')
             .leftJoin('tb_loja_cashback AS cb', 'ped.id', 'cb.id_pedido')
+            // JOIN para pegar a regra de prazo baseada no estado da loja
+            .leftJoin('tb_fornecedor_condicao_estado as regra', function() {
+                this.on('regra.id_fornecedor', '=', 'forn.id')
+                    .andOnVal('regra.estado', '=', loja.estado) // O Knex compara com o estado da loja
+            })
             .where('ped.id_loja', loja.id)
             .select(
                 'ped.id',
-                'ped.dt_inc',
+                'ped.dt_inc', // Data do pedido
                 'ped.status',
                 'ped.vl_total_pedido',
                 'forn.nome_fantasia AS fornecedor_nome',
-                'cb.vl_previsto as cashback_ganho'
+                'cb.vl_previsto as cashback_ganho',
+                'regra.prazo_pagamento_dias' // <--- O CAMPO NOVO QUE PRECISAMOS
             )
             .orderBy('ped.id', 'desc');
 
-        if(pedidos.length === 0){
+        if (pedidos.length === 0) {
             return res.json([]);
         }
 
@@ -224,17 +235,17 @@ router.get('/loja', async (req, res) => {
                 'pi.valor_unitario_praticado'
             );
 
-        const pedidosComItens = pedidos.map( (pedido) => {
+        const pedidosComItens = pedidos.map((pedido) => {
             return {
                 ...pedido,
-                itens: itens.filter( item => item.id_pedido === pedido.id)
+                itens: itens.filter(item => item.id_pedido === pedido.id)
             }
         });
 
         res.json(pedidosComItens);
-    } catch(err){
+    } catch (err) {
         console.error(err)
-        res.status(500).json({message: 'Erro ao buscar histórico.'});
+        res.status(500).json({ message: 'Erro ao buscar histórico.' });
     }
 });
 

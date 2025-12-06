@@ -6,6 +6,7 @@ import AdminDashboard from './components/admin/AdminDashboard';
 import LojaDashboard from './components/loja/LojaDashboard';
 import TrocarSenha from './components/TrocarSenha';
 
+// Componentes Fornecedor
 import FornecedorLayout from './components/fornecedor/FornecedorLayout';
 import FornecedorHome from './components/fornecedor/FornecedorHome';
 import FornecedorProdutos from './components/fornecedor/FornecedorProdutos';
@@ -13,8 +14,12 @@ import FornecedorConfiguracoes from './components/fornecedor/FornecedorConfigura
 import FornecedorPedidos from './components/fornecedor/FornecedorPedidos';
 import FornecedorCampanhas from './components/fornecedor/FornecedorCampanhas';
 
+import LojaVitrine from './components/loja/LojaVitrine';
+import LojaPedidos from './components/loja/LojaPedidos';
+import PerfilLoja from './components/loja/LojaPerfil';
 
 import AuthContext from './context/AuthContext';
+import { CartProvider } from './context/CartContext'; // <--- IMPORTANTE
 
 const RotaPrivada = ({ children, perfilPermitido }) => {
     const { authState, loading } = useContext(AuthContext);
@@ -34,10 +39,9 @@ const RotaPrivada = ({ children, perfilPermitido }) => {
     return children;
 }
 
-
 function App(){
     console.log("APP INICIOU! AuthState:", useContext(AuthContext).authState)
-    const { authState, loading } = useContext(AuthContext); // Pega o Estado do usuário, usando o useContext (Cerebro)
+    const { authState, loading } = useContext(AuthContext);
 
     if(loading){
         return (
@@ -47,58 +51,62 @@ function App(){
         )
     }
 
-    // Se não tiver user (deslogado), mostra a tela de login, se tiver user (logado), mostra o dashboard
     return (
         <div className='App'>
-            <Routes>
-                {/* Rota de login (pública) */}
-                <Route path="/login" element={!authState?.user ? <LoginPage /> : <Navigate to="/" />} />
+            {/* O CartProvider envolve as rotas para que o carrinho funcione na Loja */}
+            <CartProvider>
+                <Routes>
+                    {/* Rota de login (pública) */}
+                    <Route path="/login" element={!authState?.user ? <LoginPage /> : <Navigate to="/" />} />
 
-                {/* Rota de troca de senha */}
-                <Route path="/trocar-senha" element={<TrocarSenha />} />
+                    {/* Rota de troca de senha */}
+                    <Route path="/trocar-senha" element={<TrocarSenha />} />
 
-                {/* Rotas dos dashboards (privados) */}
-                <Route path="/admin" element={
-                    <RotaPrivada perfilPermitido="ADMIN">
-                        <AdminDashboard />
-                    </RotaPrivada>
-                } />
+                    {/* Rotas dos dashboards (privados) */}
+                    <Route path="/admin" element={
+                        <RotaPrivada perfilPermitido="ADMIN">
+                            <AdminDashboard />
+                        </RotaPrivada>
+                    } />
 
-                <Route path="/fornecedor" element={
-                    <RotaPrivada perfilPermitido="FORNECEDOR">
-                        <FornecedorLayout /> {/* O Layout com a Sidebar */}
-                    </RotaPrivada>
-                }>
-                    {/* Quando acessar /fornecedor, cai aqui */}
-                    <Route index element={<FornecedorHome />} />
+                    <Route path="/fornecedor" element={
+                        <RotaPrivada perfilPermitido="FORNECEDOR">
+                            <FornecedorLayout />
+                        </RotaPrivada>
+                    }>
+                        <Route index element={<FornecedorHome />} />
+                        <Route path="produtos" element={<FornecedorProdutos />} />
+                        <Route path="pedidos" element={<FornecedorPedidos />} />
+                        <Route path="campanhas" element={<FornecedorCampanhas />} />
+                        <Route path="configuracoes" element={<FornecedorConfiguracoes />} />
+                    </Route>
+
+                    <Route path="/loja" element={
+                        <RotaPrivada perfilPermitido="LOJA">
+                            <LojaDashboard />
+                        </RotaPrivada>
+                    } > 
+                        <Route index element={<LojaVitrine />} />
+                        <Route path="vitrine" element={<LojaVitrine />} />
+                        <Route path="meus-pedidos" element={<LojaPedidos />} />
+                        <Route path="perfil" element={<PerfilLoja />} />
                     
-                    {/* Sub-rotas: /fornecedor/produtos, etc */}
-                    <Route path="produtos" element={<FornecedorProdutos />} />
-                    <Route path="pedidos" element={<FornecedorPedidos />} />
-                    <Route path="campanhas" element={<FornecedorCampanhas />} />
-                    <Route path="configuracoes" element={<FornecedorConfiguracoes />} />
-                </Route>
+                    
+                    </Route>
 
-                <Route path="/loja" element={
-                    <RotaPrivada perfilPermitido="LOJA">
-                        <LojaDashboard />
-                    </RotaPrivada>
-                } />
+                    {/* Rota Raiz */}
+                    <Route path="/" element={
+                        authState?.user ? (
+                            <Navigate to={`/${authState.user.perfil.toLowerCase()}`} />
+                        ) : (
+                            <Navigate to="/login" />
+                        )
+                    } />
 
-                {/* Rota Raiz */}
-                <Route path="/" element={
-                    authState?.user ? (
-                        // Se tá logado, joga pro dashboard baseado no perfil
-                        <Navigate to={`/${authState.user.perfil.toLowerCase()}`} />
-                    ) : (
-                        // Se não tá logado joga pro login
-                        <Navigate to="/login" />
-                    )
-                } />
-
-                {/* Rota Coringa */}
-                <Route path="*" element={<Navigate to="/login" />} />
-            </Routes>
+                    {/* Rota Coringa */}
+                    <Route path="*" element={<Navigate to="/login" />} />
+                </Routes>
+            </CartProvider>
         </div>
     );
 }

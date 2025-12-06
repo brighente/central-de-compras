@@ -5,6 +5,21 @@ const authMiddleware = require('../authMiddleware');
 
 router.use(authMiddleware);
 
+// Função auxiliar para mapear o tipo do frontend para o ENUM do DB
+const mapTipoRegraToDB = (tipo) => {
+    if (tipo === 'VALOR') return 'VALOR_PEDIDO';
+    if (tipo === 'QUANTIDADE') return 'QTD_PRODUTO';
+    return 'VALOR_PEDIDO'; // Default
+};
+
+// Função auxiliar para mapear o tipo do DB para o frontend
+const mapTipoRegraFromDB = (tipoDB) => {
+    if (tipoDB === 'VALOR_PEDIDO') return 'VALOR';
+    if (tipoDB === 'QTD_PRODUTO') return 'QUANTIDADE';
+    return 'VALOR'; // Default
+};
+
+
 // LISTAR (GET)
 // A rota no frontend é /api/campanhas/fornecedor, então usei '/fornecedor' aqui
 router.get('/fornecedor', async (req, res) => {
@@ -21,9 +36,13 @@ router.get('/fornecedor', async (req, res) => {
         const formatadas = campanhas.map(c => ({
             id: c.id,
             descricao: c.descricao_campanha,
-            tipo_regra: c.tipo_regra || 'VALOR',
-            gatilho: c.tipo_regra === 'QUANTIDADE' ? c.quantidade_meta : c.valor_meta,
-            desconto_percentual: c.percentual_desconto,
+            // 🎯 CORREÇÃO: Mapeia o ENUM do DB para o string do frontend
+            tipo_regra: mapTipoRegraFromDB(c.tipo_regra),
+            // Adicionado percentual_desconto à lista
+            desconto_percentual: c.percentual_desconto, 
+            
+            // O gatilho deve usar o tipo_regra convertido
+            gatilho: mapTipoRegraFromDB(c.tipo_regra) === 'QUANTIDADE' ? c.quantidade_meta : c.valor_meta,
             dias_duracao: c.tempo_duracao_campanha
         }));
 
@@ -36,26 +55,29 @@ router.get('/fornecedor', async (req, res) => {
 
 // CRIAR (POST)
 router.post('/', async (req, res) => {
-    // Frontend envia: descricao, tipo_regra, gatilho, desconto_percentual, dias_duracao
     const { descricao, tipo_regra, gatilho, desconto_percentual, dias_duracao } = req.body;
 
     try {
         const fornecedor = await db('tb_fornecedor').where({ id_usuario: req.user.userId }).first();
         const usuario = await db('tb_sistema_usuario').where({ id: req.user.userId }).first();
 
+        const dbTipoRegra = mapTipoRegraToDB(tipo_regra);
+        
         // Define onde salvar o gatilho baseado no tipo
-        const valorMeta = tipo_regra === 'VALOR' ? parseFloat(gatilho) : 0;
-        const qtdMeta = tipo_regra === 'QUANTIDADE' ? parseInt(gatilho) : 0;
+        const valorMeta = dbTipoRegra === 'VALOR_PEDIDO' ? parseFloat(gatilho) : 0;
+        const qtdMeta = dbTipoRegra === 'QTD_PRODUTO' ? parseInt(gatilho) : 0;
 
         await db('tb_fornecedor_campanha').insert({
             id_fornecedor: fornecedor.id,
             id_usuario: req.user.userId,
             id_conta: usuario.id_conta,
             descricao_campanha: descricao,
-            tipo_regra: tipo_regra,             
+            // 🎯 CORREÇÃO: Usa o nome da coluna no DB (que adicionamos) e o ENUM mapeado
+            tipo_regra: dbTipoRegra, 
             valor_meta: valorMeta,
             quantidade_meta: qtdMeta,
-            percentual_desconto: parseFloat(desconto_percentual),
+            // 🎯 CORREÇÃO: Usa o nome da coluna no DB (que adicionamos)
+            percentual_desconto: parseFloat(desconto_percentual), 
             tempo_duracao_campanha: parseInt(dias_duracao),
             dt_inc: new Date(),
             quantidade_atingida: 0,
@@ -65,7 +87,8 @@ router.post('/', async (req, res) => {
         res.status(201).json({ message: 'Campanha criada com sucesso!' });
     } catch (err) {
         console.error(err);
-        res.status(500).json({ message: 'Erro ao criar campanha' });
+        // Exibe o erro específico para debug no console, mas uma mensagem genérica no frontend
+        res.status(500).json({ message: 'Erro ao criar campanha: ' + err.message });
     }
 });
 
@@ -77,16 +100,20 @@ router.put('/:id', async (req, res) => {
     try {
         const fornecedor = await db('tb_fornecedor').where({ id_usuario: req.user.userId }).first();
 
-        const valorMeta = tipo_regra === 'VALOR' ? parseFloat(gatilho) : 0;
-        const qtdMeta = tipo_regra === 'QUANTIDADE' ? parseInt(gatilho) : 0;
+        const dbTipoRegra = mapTipoRegraToDB(tipo_regra);
+
+        const valorMeta = dbTipoRegra === 'VALOR_PEDIDO' ? parseFloat(gatilho) : 0;
+        const qtdMeta = dbTipoRegra === 'QTD_PRODUTO' ? parseInt(gatilho) : 0;
 
         const update = await db('tb_fornecedor_campanha')
             .where({ id: id, id_fornecedor: fornecedor.id })
             .update({
                 descricao_campanha: descricao,
-                tipo_regra: tipo_regra,
+                // 🎯 CORREÇÃO: Usa o nome da coluna no DB (que adicionamos) e o ENUM mapeado
+                tipo_regra: dbTipoRegra,
                 valor_meta: valorMeta,
                 quantidade_meta: qtdMeta,
+                // 🎯 CORREÇÃO: Usa o nome da coluna no DB (que adicionamos)
                 percentual_desconto: parseFloat(desconto_percentual),
                 tempo_duracao_campanha: parseInt(dias_duracao)
             });
@@ -116,5 +143,50 @@ router.delete('/:id', async (req, res) => {
         res.status(500).json({ message: 'Erro ao remover campanha' });
     }
 });
+
+router.get('/ativas', async (req, res) => {
+    try {
+        // Busca campanhas e junta com o nome do fornecedor
+        const campanhas = await db('tb_fornecedor_campanha')
+            .join('tb_fornecedor', 'tb_fornecedor_campanha.id_fornecedor', 'tb_fornecedor.id')
+            .select(
+                'tb_fornecedor_campanha.*',
+                'tb_fornecedor.nome_fantasia as nome_fornecedor'
+            )
+            .orderBy('tb_fornecedor_campanha.dt_inc', 'desc');
+
+        const agora = new Date();
+
+        // Filtra apenas as que ainda estão dentro do prazo
+        const ativas = campanhas.filter(c => {
+            const dataInicio = new Date(c.dt_inc);
+            // Cria a data de expiração somando os dias de duração
+            const dataFim = new Date(dataInicio);
+            dataFim.setDate(dataFim.getDate() + c.tempo_duracao_campanha);
+            
+            // Retorna true se Agora for menor ou igual a DataFim
+            return agora <= dataFim;
+        });
+
+        // Formata para o frontend
+        const formatadas = ativas.map(c => ({
+            id: c.id,
+            id_fornecedor: c.id_fornecedor, // Importante para linkar/filtrar depois se quiser
+            fornecedor: c.nome_fornecedor,
+            descricao: c.descricao_campanha,
+            tipo_regra: mapTipoRegraFromDB(c.tipo_regra),
+            gatilho: mapTipoRegraFromDB(c.tipo_regra) === 'QUANTIDADE' ? c.quantidade_meta : c.valor_meta,
+            desconto: c.percentual_desconto,
+            validade: new Date(new Date(c.dt_inc).setDate(new Date(c.dt_inc).getDate() + c.tempo_duracao_campanha)).toLocaleDateString('pt-BR')
+        }));
+
+        res.json(formatadas);
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Erro ao buscar campanhas ativas' });
+    }
+});
+
 
 module.exports = router;

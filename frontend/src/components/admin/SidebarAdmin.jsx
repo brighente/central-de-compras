@@ -1,74 +1,168 @@
 import React, { useState } from 'react';
-import { FaUserPlus, FaList, FaChevronDown, FaChevronUp, FaSignOutAlt, FaStore, FaTruck, FaBoxOpen } from 'react-icons/fa';
+import Sidebar from '../shared/Sidebar'; 
+import { FaUserPlus, FaList, FaChevronDown, FaChevronUp, FaStore, FaTruck, FaBoxOpen } from 'react-icons/fa';
 
-export default function SidebarAdmin({ aoClicar, onLogout }) {
+export default function SidebarAdmin({ aoClicar, activeView }) {
+    
     const [openMenu, setOpenMenu] = useState('');
 
     const toggleMenu = (menuName) => {
         setOpenMenu(openMenu === menuName ? '' : menuName);
     };
 
-    const linkBase = "flex items-center gap-3 w-full p-3 pl-8 text-sm font-medium transition-colors border-b border-[#00802b] hover:bg-[#006622] text-left";
-  const btnMenu = "flex items-center justify-between w-full p-4 font-bold text-white hover:bg-[#00802b] transition-colors";
+    // Arrays para identificar se o menu PAI deve acender quando um filho estiver ativo
+    const viewsCadastrar = ['loja', 'fornecedor', 'produto'];
+    const viewsListas    = ['lista_loja', 'lista_fornecedor', 'lista_produto'];
 
-  return (
-    <aside className="w-64 bg-[#009933] text-white flex flex-col min-h-screen shadow-lg">
-    
-        {/* Cabeçalho */}
-        <div className="p-6 border-b border-[#00802b]">
-            <h2 className="text-xl font-bold uppercase tracking-wider">Painel ADM</h2>
-        </div>
+    // --- LÓGICA DE INTERAÇÃO (HOVER) ---
+    // Isso faz o botão reagir quando o mouse passa por cima, mas respeita se ele já estiver ativo
+    const handleMouseEnter = (e, isActive) => {
+        if (!isActive) {
+            e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+        }
+    };
 
-        {/* Menu Principal */}
-        <nav className="flex-1 py-2">
-            
-            {/* --- MENU CADASTRAR --- */}
-            <div>
-            <button onClick={() => toggleMenu('cadastrar')} className={btnMenu}>
-                <div className="flex items-center gap-3">
-                <FaUserPlus /> <span>Cadastrar</span>
-                </div>
-                {openMenu === 'cadastrar' ? <FaChevronUp size={12}/> : <FaChevronDown size={12}/>}
-            </button>
+    const handleMouseLeave = (e, isActive) => {
+        if (!isActive) {
+            e.currentTarget.style.background = 'transparent';
+        }
+    };
 
-            {/* Sub-menu Cascata */}
-            <div className={`overflow-hidden transition-all duration-300 ${openMenu === 'cadastrar' ? 'max-h-96 bg-[#007a29]' : 'max-h-0'}`}>
-                <button onClick={() => aoClicar('loja')} className={linkBase}>
-                <FaStore /> Loja
-                </button>
-                <button onClick={() => aoClicar('fornecedor')} className={linkBase}>
-                <FaTruck /> Fornecedor
-                </button>
-                <button onClick={() => aoClicar('produto')} className={linkBase}>
-                <FaBoxOpen /> Produto
-                </button>
-            </div>
-            </div>
+    // --- 1. ESTILO DO PAI (Menu Principal) ---
+    const menuItemStyle = (isActive) => ({
+        padding: '12px 15px',
+        margin: '5px 0',
+        borderRadius: '6px',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between', 
+        gap: '10px',
+        color: 'white',
+        background: isActive ? 'rgba(255,255,255,0.2)' : 'transparent',
+        borderLeft: isActive ? '4px solid #00ff55' : '4px solid transparent',
+        transition: 'all 0.2s',
+        fontWeight: isActive ? 'bold' : 'normal',
+        userSelect: 'none'
+    });
 
-            {/* --- MENU LISTAS --- */}
-            <div>
-                    <button onClick={() => toggleMenu('listas')} className={btnMenu}>
-                        <div className="flex items-center gap-3"><FaList /> <span>Gerenciar</span></div>
-                        {openMenu === 'listas' ? <FaChevronUp size={12}/> : <FaChevronDown size={12}/>}
-                    </button>
-                    <div className={`overflow-hidden transition-all duration-300 ${openMenu === 'listas' ? 'max-h-96 bg-[#007a29]' : 'max-h-0'}`}>
-                        <button onClick={() => aoClicar('lista_loja')} className={linkBase}><FaStore /> Listar Lojas</button>
-                        <button onClick={() => aoClicar('lista_fornecedor')} className={linkBase}><FaTruck /> Listar Fornecedores</button>
-                        <button onClick={() => aoClicar('lista_produto')} className={linkBase}><FaBoxOpen /> Listar Produtos</button>
+    // --- 2. ESTILO DOS FILHOS (Subitems) ---
+    const subItemStyle = (isActive) => ({
+        padding: '10px 10px 10px 35px', // Indentação para a direita
+        margin: '2px 0',
+        borderRadius: '6px',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        color: 'rgba(255,255,255,0.8)', 
+        fontSize: '0.9rem',
+        // Se ativo: Fundo claro + Borda Verde. Se inativo: Transparente
+        background: isActive ? 'rgba(255,255,255,0.1)' : 'transparent',
+        borderLeft: isActive ? '4px solid #00ff55' : '4px solid transparent',
+        fontWeight: isActive ? 'bold' : 'normal',
+        transition: 'all 0.2s'
+    });
+
+    // Verificações para acender o Pai
+    const isCadastrarActive = openMenu === 'cadastrar' || viewsCadastrar.includes(activeView);
+    const isListasActive = openMenu === 'listas' || viewsListas.includes(activeView);
+
+    return (
+        <Sidebar title="PAINEL ADM">
+            <div style={{ flex: 1 }}>
+                
+                {/* === MENU: CADASTRAR === */}
+                <div>
+                    <div 
+                        style={menuItemStyle(isCadastrarActive)} 
+                        onClick={() => toggleMenu('cadastrar')}
+                        onMouseEnter={(e) => handleMouseEnter(e, isCadastrarActive)}
+                        onMouseLeave={(e) => handleMouseLeave(e, isCadastrarActive)}
+                    >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <FaUserPlus /> <span>Cadastrar</span>
+                        </div>
+                        {openMenu === 'cadastrar' ? <FaChevronUp size={12}/> : <FaChevronDown size={12}/>}
                     </div>
+
+                    {openMenu === 'cadastrar' && (
+                        <div style={{ marginBottom: '10px' }}>
+                            <div 
+                                style={subItemStyle(activeView === 'loja')} 
+                                onClick={() => aoClicar('loja')}
+                                onMouseEnter={(e) => handleMouseEnter(e, activeView === 'loja')}
+                                onMouseLeave={(e) => handleMouseLeave(e, activeView === 'loja')}
+                            >
+                                <FaStore /> Loja
+                            </div>
+                            
+                            <div 
+                                style={subItemStyle(activeView === 'fornecedor')} 
+                                onClick={() => aoClicar('fornecedor')}
+                                onMouseEnter={(e) => handleMouseEnter(e, activeView === 'fornecedor')}
+                                onMouseLeave={(e) => handleMouseLeave(e, activeView === 'fornecedor')}
+                            >
+                                <FaTruck /> Fornecedor
+                            </div>
+
+                            <div 
+                                style={subItemStyle(activeView === 'produto')} 
+                                onClick={() => aoClicar('produto')}
+                                onMouseEnter={(e) => handleMouseEnter(e, activeView === 'produto')}
+                                onMouseLeave={(e) => handleMouseLeave(e, activeView === 'produto')}
+                            >
+                                <FaBoxOpen /> Produto
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* === MENU: GERENCIAR LISTAS === */}
+                <div style={{ marginTop: '10px' }}>
+                    <div 
+                        style={menuItemStyle(isListasActive)} 
+                        onClick={() => toggleMenu('listas')}
+                        onMouseEnter={(e) => handleMouseEnter(e, isListasActive)}
+                        onMouseLeave={(e) => handleMouseLeave(e, isListasActive)}
+                    >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <FaList /> <span>Gerenciar</span>
+                        </div>
+                        {openMenu === 'listas' ? <FaChevronUp size={12}/> : <FaChevronDown size={12}/>}
+                    </div>
+
+                    {openMenu === 'listas' && (
+                        <div style={{ marginBottom: '10px' }}>
+                            <div 
+                                style={subItemStyle(activeView === 'lista_loja')} 
+                                onClick={() => aoClicar('lista_loja')}
+                                onMouseEnter={(e) => handleMouseEnter(e, activeView === 'lista_loja')}
+                                onMouseLeave={(e) => handleMouseLeave(e, activeView === 'lista_loja')}
+                            >
+                                <FaStore /> Listar Lojas
+                            </div>
+                            <div 
+                                style={subItemStyle(activeView === 'lista_fornecedor')} 
+                                onClick={() => aoClicar('lista_fornecedor')}
+                                onMouseEnter={(e) => handleMouseEnter(e, activeView === 'lista_fornecedor')}
+                                onMouseLeave={(e) => handleMouseLeave(e, activeView === 'lista_fornecedor')}
+                            >
+                                <FaTruck /> Listar Fornecedores
+                            </div>
+                            <div 
+                                style={subItemStyle(activeView === 'lista_produto')} 
+                                onClick={() => aoClicar('lista_produto')}
+                                onMouseEnter={(e) => handleMouseEnter(e, activeView === 'lista_produto')}
+                                onMouseLeave={(e) => handleMouseLeave(e, activeView === 'lista_produto')}
+                            >
+                                <FaBoxOpen /> Listar Produtos
+                            </div>
+                        </div>
+                    )}
+                </div>
+
             </div>
-
-        </nav>
-
-        {/* Rodapé */}
-        <div className="p-4 border-t border-[#00802b]">
-            <button 
-            onClick={onLogout} 
-            className="flex items-center justify-center gap-2 w-full p-2 rounded hover:bg-white/10 transition-colors font-medium"
-            >
-            <FaSignOutAlt /> Sair
-            </button>
-        </div>
-    </aside>
-  );
+        </Sidebar>
+    );
 }
