@@ -3,17 +3,53 @@ const router = express.Router();
 const db = require('../db');
 const bcrypt = require('bcryptjs');
 const authMiddleware = require('../authMiddleware');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
 router.use(authMiddleware);
+
+// --- Configuração do Upload (Multer) ---
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const uploadPath = 'uploads/';
+        if (!fs.existsSync(uploadPath)){
+            fs.mkdirSync(uploadPath);
+        }
+        cb(null, uploadPath);
+    },
+    filename: (req, file, cb) => {
+        cb(null, Date.now() + path.extname(file.originalname));
+    }
+});
+
+const upload = multer({ 
+    storage: storage,
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+    fileFilter: (req, file, cb) => {
+        const filetypes = /jpeg|jpg|png|webp/;
+        const mimetype = filetypes.test(file.mimetype);
+        const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+
+        if (mimetype && extname) {
+            return cb(null, true);
+        }
+        cb(new Error('Erro: Apenas imagens (jpeg, jpg, png, webp) são permitidas!'));
+    }
+});
 
 const gerarSenhaProvisoria = () => {
     return Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8);
 }
 
-// 🎯 NOVO: Função para remover caracteres não numéricos de campos mascarados
+// 🎯 Função para remover caracteres não numéricos de campos mascarados
 const sanitizeMaskedField = (value) => {
     return value ? value.replace(/\D/g, '') : null;
 };
+
+// =========================================
+// ROTAS DE AUXILIARES (GET)
+// =========================================
 
 router.get('/lista-fornecedores', async (req, res) => {
     try {
@@ -34,7 +70,7 @@ router.get('/lista-categorias', async (req, res) => {
 });
 
 // =========================================
-// ROTAS DE CADASTRO (POST) - Sanitizado
+// ROTAS DE CADASTRO (POST)
 // =========================================
 
 router.post('/loja', async (req, res) => {
@@ -43,7 +79,6 @@ router.post('/loja', async (req, res) => {
         logradouro, numero, bairro, cidade, estado, cep
     } = req.body;
 
-    // SANITIZAÇÃO DE DADOS MASCARADOS
     cnpj = sanitizeMaskedField(cnpj);
     telefone = sanitizeMaskedField(telefone);
     cep = sanitizeMaskedField(cep);
@@ -121,7 +156,6 @@ router.post('/fornecedor', async (req, res) => {
         cnpj, nome_fantasia, razao_social, email, telefone, logradouro, numero, bairro, cidade, estado, cep
     } = req.body;
 
-    // SANITIZAÇÃO DE DADOS MASCARADOS
     cnpj = sanitizeMaskedField(cnpj);
     telefone = sanitizeMaskedField(telefone);
     cep = sanitizeMaskedField(cep);
@@ -133,8 +167,6 @@ router.post('/fornecedor', async (req, res) => {
         if(userExists){
             throw new Error('Usuario já cadastrado no sistema.');
         }
-        
-        // ... (criação de conta e usuário)
 
         const [conta] = await transaction('tb_sistema_conta').insert({
             nm_conta: nome_fantasia,
@@ -183,8 +215,6 @@ router.post('/fornecedor', async (req, res) => {
         });
 
         await transaction.commit();
-        
-        // ... (retorno de sucesso)
 
         res.status(201).json({
             message: 'Fornecedor cadastrado com sucesso',
@@ -201,10 +231,12 @@ router.post('/fornecedor', async (req, res) => {
     }
 });
 
-router.post('/produtos', async (req, res) => {
+// ✅ ATUALIZADO: Agora suporta upload de imagem (POST)
+router.post('/produtos', upload.single('imagem'), async (req, res) => {
+    // Com multer, usa req.body para textos e req.file para o arquivo
     const { produto, valor_produto, id_categoria, id_fornecedor } = req.body;
-    // Sem campos mascarados aqui, apenas o valor do produto que o frontend já sanitiza.
-    
+    const imagem = req.file ? req.file.filename : null;
+
     try{
         const fornecedor = await db('tb_fornecedor').where({ id: id_fornecedor }).first();
 
@@ -214,9 +246,10 @@ router.post('/produtos', async (req, res) => {
 
         await db('tb_fornecedor_produto').insert({
             id_fornecedor,
-            id_categoria: id_categoria,
+            id_categoria,
             produto,
-            valor_produto
+            valor_produto,
+            imagem // Salva o nome do arquivo
         });
 
         res.status(201).json({ message: 'Produto cadastrado com sucesso' });
@@ -228,13 +261,11 @@ router.post('/produtos', async (req, res) => {
 
 
 // =========================================
-// ROTAS DE LISTAGEM (Para as Tabelas)
+// ROTAS DE LISTAGEM (GET)
 // =========================================
 
-// ... (Rotas GET permanecem iguais)
 router.get('/lojas', async (req, res) => {
     try {
-        // Trazendo dados da Loja + Endereço + Email do Usuário
         const lojas = await db('tb_loja')
             .leftJoin('tb_sistema_usuario', 'tb_loja.id_usuario', 'tb_sistema_usuario.id')
             .leftJoin('tb_loja_endereco', 'tb_loja.id', 'tb_loja_endereco.id_loja')
@@ -272,7 +303,7 @@ router.get('/fornecedores', async (req, res) => {
 
         res.json(fornecedores);
     } catch (err) {
-        console.error(err); // Importante para ver o erro real no terminal
+        console.error(err);
         res.status(500).json({ message: 'Erro ao listar fornecedores.' });
     }
 });
@@ -287,7 +318,14 @@ router.get('/produtos', async (req, res) => {
                 'tb_fornecedor.nome_fantasia as nome_fornecedor',
                 'tb_categoria.nome_categoria'
             );
-        res.json(produtos);
+
+        // Opcional: Adicionar URL completa da imagem para o front
+        const produtosComUrl = produtos.map(p => ({
+            ...p,
+            imagemUrl: p.imagem ? `http://localhost:3001/uploads/${p.imagem}` : null
+        }));
+
+        res.json(produtosComUrl);
     } catch (err) {
         res.status(500).json({ message: 'Erro ao listar produtos.' });
     }
@@ -295,23 +333,20 @@ router.get('/produtos', async (req, res) => {
 
 
 // =========================================
-// ROTAS DE EDIÇÃO (PUT) - Sanitizado
+// ROTAS DE EDIÇÃO (PUT)
 // =========================================
 
 router.put('/loja/:id', async (req, res) => {
     const { id } = req.params;
     let { nome_fantasia, razao_social, telefone, logradouro, numero, bairro, cidade, estado, cep } = req.body;
     
-    // SANITIZAÇÃO DE DADOS MASCARADOS
     telefone = sanitizeMaskedField(telefone);
     cep = sanitizeMaskedField(cep);
 
     const trx = await db.transaction();
     try {
-        // Atualiza dados da Loja
         await trx('tb_loja').where({ id }).update({ nome_fantasia, razao_social, telefone });
         
-        // Atualiza Endereço
         await trx('tb_loja_endereco').where({ id_loja: id }).update({
             logradouro, numero, bairro, cidade, estado, cep
         });
@@ -329,7 +364,6 @@ router.put('/fornecedor/:id', async (req, res) => {
     const { id } = req.params;
     let { nome_fantasia, razao_social, telefone, logradouro, numero, bairro, cidade, estado, cep } = req.body;
 
-    // SANITIZAÇÃO DE DADOS MASCARADOS
     telefone = sanitizeMaskedField(telefone);
     cep = sanitizeMaskedField(cep);
 
@@ -350,25 +384,42 @@ router.put('/fornecedor/:id', async (req, res) => {
     }
 });
 
-router.put('/produto/:id', async (req, res) => {
+// ✅ ATUALIZADO: Agora suporta upload de imagem na edição (PUT)
+router.put('/produto/:id', upload.single('imagem'), async (req, res) => {
     const { id } = req.params;
     const { produto, valor_produto, id_categoria, id_fornecedor } = req.body;
+    const novaImagem = req.file ? req.file.filename : undefined;
 
     try {
-        await db('tb_fornecedor_produto').where({ id }).update({
+        // Busca produto antigo para ver se tem imagem para deletar
+        const produtoAntigo = await db('tb_fornecedor_produto').where({ id }).first();
+
+        const updateData = {
             produto,
             valor_produto,
             id_categoria,
             id_fornecedor
-        });
+        };
+
+        if (novaImagem) {
+            updateData.imagem = novaImagem;
+            
+            // Se existia imagem antiga, deleta o arquivo físico
+            if (produtoAntigo && produtoAntigo.imagem) {
+                const caminhoAntigo = path.join('uploads', produtoAntigo.imagem);
+                if (fs.existsSync(caminhoAntigo)) {
+                    fs.unlinkSync(caminhoAntigo);
+                }
+            }
+        }
+
+        await db('tb_fornecedor_produto').where({ id }).update(updateData);
         res.json({ message: 'Produto atualizado com sucesso!' });
     } catch (err) {
         console.error("Erro ao atualizar produto:", err);
         res.status(500).json({ message: 'Erro ao atualizar produto.' });
     }
 });
-
-// ... (Rotas DELETE permanecem iguais)
 
 // =========================================
 // ROTAS DE EXCLUSÃO (DELETE)
@@ -379,13 +430,11 @@ router.delete('/loja/:id', async (req, res) => {
     
     await db.transaction(async (trx) => {
         try {
-            // 1. Busca a loja e salva o ID do usuário para usar no final
             const loja = await trx('tb_loja').where({ id }).first();
             if(!loja) throw new Error('Loja não encontrada');
             
             const idUsuario = loja.id_usuario; 
 
-            // 2. Limpa dados vinculados à Loja (Pedidos, Itens, Endereço)
             const pedidos = await trx('tb_pedido').where({ id_loja: id }).select('id');
             const idsPedidos = pedidos.map(p => p.id);
 
@@ -395,17 +444,10 @@ router.delete('/loja/:id', async (req, res) => {
             }
 
             await trx('tb_loja_endereco').where({ id_loja: id }).del();
-            // await trx('tb_loja_cashback').where({ id_loja: id }).del(); // Descomente se existir
-
-            // 3. Apaga a Loja
             await trx('tb_loja').where({ id }).del();
 
-            // 4. Agora apaga o Usuário e seus Perfis
             if (idUsuario) {
-                // PRIMEIRO: Apaga os perfis vinculados a esse usuário
                 await trx('tb_sistema_usuario_perfil').where({ id_usuario: idUsuario }).del();
-                
-                // SEGUNDO: Apaga o usuário
                 await trx('tb_sistema_usuario').where({ id: idUsuario }).del();
             }
 
@@ -413,7 +455,6 @@ router.delete('/loja/:id', async (req, res) => {
 
         } catch (err) {
             console.error("Erro ao excluir loja:", err);
-            // O rollback é automático em caso de erro
             res.status(500).json({ message: 'Erro ao excluir loja: ' + err.message });
         }
     });
@@ -424,36 +465,36 @@ router.delete('/fornecedor/:id', async (req, res) => {
 
     await db.transaction(async (trx) => {
         try {
-            // 1. Busca fornecedor e guarda ID do usuário
             const fornecedor = await trx('tb_fornecedor').where({ id }).first();
             if(!fornecedor) throw new Error('Fornecedor não encontrado');
 
             const idUsuario = fornecedor.id_usuario; 
 
-            // 2. Limpa produtos e vínculos em pedidos
-            const produtos = await trx('tb_fornecedor_produto').where({ id_fornecedor: id }).select('id');
+            const produtos = await trx('tb_fornecedor_produto').where({ id_fornecedor: id }).select('id', 'imagem');
             const idsProdutos = produtos.map(p => p.id);
+
+            // Deleta arquivos físicos das imagens dos produtos
+            produtos.forEach(prod => {
+                if (prod.imagem) {
+                    const caminho = path.join('uploads', prod.imagem);
+                    if (fs.existsSync(caminho)) fs.unlinkSync(caminho);
+                }
+            });
 
             if(idsProdutos.length > 0){
                 await trx('tb_pedido_item').whereIn('id_produto', idsProdutos).del();
                 await trx('tb_fornecedor_produto').whereIn('id', idsProdutos).del();
             }
 
-            // 3. Limpa dados do Fornecedor
             await trx('tb_fornecedor_endereco').where({ id_fornecedor: id }).del();
             await trx('tb_fornecedor_campanha').where({ id_fornecedor: id }).del();
             await trx('tb_fornecedor_condicao_estado').where({ id_fornecedor: id }).del();
             await trx('tb_fornecedor_condicao_pagamento').where({ id_fornecedor: id }).del();
 
-            // 4. Apaga o Fornecedor
             await trx('tb_fornecedor').where({ id }).del();
 
-            // 5. Apaga Usuário e Perfil
             if (idUsuario) {
-                // PRIMEIRO: Perfis
                 await trx('tb_sistema_usuario_perfil').where({ id_usuario: idUsuario }).del();
-                
-                // SEGUNDO: Usuário
                 await trx('tb_sistema_usuario').where({ id: idUsuario }).del();
             }
 
@@ -466,16 +507,28 @@ router.delete('/fornecedor/:id', async (req, res) => {
     });
 });
 
+// ✅ ATUALIZADO: Remove arquivo físico na exclusão do produto
 router.delete('/produto/:id', async (req, res) => {
     const { id } = req.params;
     
     await db.transaction(async (trx) => {
         try {
-            // 1. Remove este produto de qualquer pedido existente (limpeza forçada)
+            // Busca dados do produto para pegar o nome da imagem antes de deletar
+            const produto = await trx('tb_fornecedor_produto').where({ id }).first();
+
+            // 1. Remove este produto de qualquer pedido existente
             await trx('tb_pedido_item').where({ id_produto: id }).del();
 
             // 2. Remove o produto
             await trx('tb_fornecedor_produto').where({ id }).del();
+
+            // 3. Se deu certo no banco, apaga o arquivo físico
+            if (produto && produto.imagem) {
+                const caminhoArquivo = path.join('uploads', produto.imagem);
+                if (fs.existsSync(caminhoArquivo)) {
+                    fs.unlinkSync(caminhoArquivo);
+                }
+            }
 
             res.json({ message: 'Produto excluído com sucesso!' });
         } catch (err) {

@@ -1,22 +1,25 @@
 import React, { useState, useEffect, useContext } from 'react';
 import AuthContext from '../../context/AuthContext';
-import { FaPlus, FaTrash, FaEdit, FaSave, FaTimes } from 'react-icons/fa';
+import { FaPlus, FaTrash, FaEdit, FaImage } from 'react-icons/fa';
 
 export default function FornecedorProdutos() {
     const { authState, logout } = useContext(AuthContext);
     const [meusProdutos, setMeusProdutos] = useState([]);
     const [categorias, setCategorias] = useState([]);
     
-    // Estado para controlar se estamos editando
     const [editandoId, setEditandoId] = useState(null); 
     
+    // Novo estado para o arquivo de imagem
+    const [arquivoImagem, setArquivoImagem] = useState(null);
+
     const [prodForm, setProdForm] = useState({ 
         produto: '', 
         valor_produto: '', 
         id_categoria: '' 
     });
 
-    const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authState.token}` };
+    // Headers para GET e DELETE (JSON)
+    const headers = { 'Authorization': `Bearer ${authState.token}` };
 
     useEffect(() => {
         if (!authState.token) return;
@@ -24,13 +27,11 @@ export default function FornecedorProdutos() {
     }, [authState.token]);
 
     const carregarDados = () => {
-        // Produtos
         fetch('http://localhost:3001/api/produtos', { headers })
             .then(r => { if(r.status === 401) logout(); return r.json(); })
             .then(data => Array.isArray(data) ? setMeusProdutos(data) : setMeusProdutos([]))
             .catch(console.error);
 
-        // Categorias
         fetch('http://localhost:3001/api/produtos/categorias', { headers })
             .then(r => r.json())
             .then(setCategorias)
@@ -48,14 +49,35 @@ export default function FornecedorProdutos() {
                 method = 'PUT'; 
             }
 
-            const res = await fetch(url, { method, headers, body: JSON.stringify(prodForm) });
+            // MUDANÇA CRUCIAL: Usar FormData para enviar arquivos
+            const formData = new FormData();
+            formData.append('produto', prodForm.produto);
+            formData.append('valor_produto', prodForm.valor_produto);
+            formData.append('id_categoria', prodForm.id_categoria);
+            
+            // Só anexa se o usuário selecionou um arquivo
+            if (arquivoImagem) {
+                formData.append('imagem', arquivoImagem);
+            }
+
+            // Headers especias para FormData: NÃO setar 'Content-Type', o navegador faz isso sozinho com o boundary
+            const uploadHeaders = {
+                'Authorization': `Bearer ${authState.token}`
+            };
+
+            const res = await fetch(url, { 
+                method, 
+                headers: uploadHeaders, 
+                body: formData 
+            });
 
             if (res.ok) {
                 alert(editandoId ? 'Produto atualizado!' : 'Produto cadastrado!');
                 limparForm();
                 carregarDados();
             } else {
-                alert('Erro ao salvar.');
+                const err = await res.json();
+                alert('Erro: ' + (err.message || 'Erro ao salvar'));
             }
         } catch (err) { alert('Erro de conexão'); }
     };
@@ -67,6 +89,7 @@ export default function FornecedorProdutos() {
             valor_produto: p.valor_produto,
             id_categoria: p.id_categoria
         });
+        setArquivoImagem(null); // Reseta o arquivo selecionado ao entrar em edição
     };
 
     const handleDeletar = async (id) => {
@@ -81,6 +104,9 @@ export default function FornecedorProdutos() {
     const limparForm = () => {
         setEditandoId(null);
         setProdForm({ produto: '', valor_produto: '', id_categoria: '' });
+        setArquivoImagem(null);
+        // Reseta o input file visualmente
+        document.getElementById('fileInput').value = ""; 
     }
 
     const inputStyle = { width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc', outline: 'none' };
@@ -103,6 +129,18 @@ export default function FornecedorProdutos() {
                         <option value="">Selecione Categoria...</option>
                         {categorias.map(c => <option key={c.id} value={c.id}>{c.nome_categoria}</option>)}
                     </select>
+
+                    {/* Input de Imagem */}
+                    <div>
+                        <label style={{display:'block', marginBottom:'5px', fontSize:'0.9rem', color:'#666'}}>Imagem do Produto:</label>
+                        <input 
+                            id="fileInput"
+                            type="file" 
+                            accept="image/*"
+                            onChange={(e) => setArquivoImagem(e.target.files[0])}
+                            style={{...inputStyle, padding: '5px'}} 
+                        />
+                    </div>
                     
                     <button type="submit" style={btnStyle}>
                         {editandoId ? 'ATUALIZAR' : 'CADASTRAR'}
@@ -122,6 +160,7 @@ export default function FornecedorProdutos() {
                 <table style={{width: '100%', borderCollapse: 'collapse'}}>
                     <thead>
                         <tr style={{textAlign: 'left', color: '#888', borderBottom: '1px solid #eee'}}>
+                            <th style={{padding:'10px'}}>Imagem</th>
                             <th style={{padding:'10px'}}>Produto</th>
                             <th style={{padding:'10px'}}>Preço</th>
                             <th style={{textAlign:'center'}}>Ações</th>
@@ -130,9 +169,18 @@ export default function FornecedorProdutos() {
                     <tbody>
                         {meusProdutos.map(p => (
                             <tr key={p.id} style={{borderBottom: '1px solid #f9f9f9'}}>
+                                <td style={{padding:'10px'}}>
+                                    {p.imagemUrl ? (
+                                        <img src={p.imagemUrl} alt={p.produto} style={{width:'50px', height:'50px', objectFit:'cover', borderRadius:'4px'}} />
+                                    ) : (
+                                        <div style={{width:'50px', height:'50px', background:'#eee', borderRadius:'4px', display:'flex', alignItems:'center', justifyContent:'center', color:'#ccc'}}>
+                                            <FaImage />
+                                        </div>
+                                    )}
+                                </td>
                                 <td style={{padding:'10px', fontWeight:'bold'}}>{p.produto}</td>
                                 <td style={{padding:'10px', color:'#009933'}}>R$ {parseFloat(p.valor_produto).toFixed(2)}</td>
-                                <td style={{textAlign:'center', display:'flex', justifyContent:'center', gap:'10px', padding: '10px'}}>
+                                <td style={{textAlign:'center', display:'flex', justifyContent:'center', gap:'10px', padding: '10px', height: '50px', alignItems: 'center'}}>
                                     <button onClick={() => handleEditar(p)} title="Editar" style={{background:'transparent', border:'none', color:'#ffc107', cursor:'pointer'}}><FaEdit size={18}/></button>
                                     <button onClick={() => handleDeletar(p.id)} title="Excluir" style={{background:'transparent', border:'none', color:'#dc3545', cursor:'pointer'}}><FaTrash size={16}/></button>
                                 </td>

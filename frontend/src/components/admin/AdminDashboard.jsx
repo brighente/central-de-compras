@@ -18,6 +18,7 @@ export default function AdminDashboard(){
     const [listaFornecedores, setListaFornecedores] = useState([]);
     const [listaCategorias, setListaCategorias] = useState([]);
     const [dadosTabela, setDadosTabela] = useState([]);
+    const [arquivoAdmin, setArquivoAdmin] = useState(null);
 
     const initialFormState = {
         nome_fantasia: '', razao_social: '', cnpj: '', email: '', telefone: '', 
@@ -42,6 +43,7 @@ export default function AdminDashboard(){
         if(aba.startsWith('lista_')){
             setEditandoId(null);
             setForm(initialFormState);
+            setArquivoAdmin(null);
 
             let endpoint = '';
             if(aba === 'lista_loja') endpoint = '/lojas';
@@ -61,6 +63,7 @@ export default function AdminDashboard(){
         setEditandoId(item.id);
         setResultado(null);
         setCredenciaisGeradas(null); 
+        setArquivoAdmin(null);
 
         // 1. Cria um objeto base que preenche todos os campos definidos em initialFormState
         const baseForm = {
@@ -162,17 +165,14 @@ export default function AdminDashboard(){
         setCredenciaisGeradas(null); 
         
         let url = 'http://localhost:3001/api/admin';
-        let method = 'POST';
-
-        // Prepara os dados: remove a formatação dos campos mascarados
+       
         const formToSend = { ...form };
-        // Garante que os campos mascarados só contenham números, caso o DB espere assim.
         if (formToSend.cnpj) formToSend.cnpj = formToSend.cnpj.replace(/\D/g, '');
         if (formToSend.cep) formToSend.cep = formToSend.cep.replace(/\D/g, '');
         if (formToSend.telefone) formToSend.telefone = formToSend.telefone.replace(/\D/g, '');
 
+        // A variável 'method' não estava definida, a lógica correta está abaixo nas options
         if(editandoId) {
-            method = 'PUT'; 
             if(aba === 'loja') url += `/loja/${editandoId}`;
             else if(aba === 'fornecedor') url += `/fornecedor/${editandoId}`;
             else if(aba === 'produto') url += `/produto/${editandoId}`;
@@ -182,35 +182,65 @@ export default function AdminDashboard(){
             else if(aba === 'produto') url += '/produtos';
         }
 
+        let options = {
+            method: editandoId ? 'PUT' : 'POST',
+            headers: { 'Authorization': `Bearer ${authState.token}` }
+        };
+
+        if (aba === 'produto') {
+            const formData = new FormData();
+            formData.append('produto', form.produto);
+            formData.append('valor_produto', form.valor_produto);
+            formData.append('id_categoria', form.id_categoria);
+            formData.append('id_fornecedor', form.id_fornecedor); 
+
+            if (arquivoAdmin) {
+                formData.append('imagem', arquivoAdmin);
+            }
+
+            options.body = formData;
+
+        } else {
+            options.headers['Content-Type'] = 'application/json';
+            options.body = JSON.stringify(formToSend);
+        }
+
         try {
-            const res = await fetch(url, {
-                method: method,
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authState.token}` },
-                body: JSON.stringify(formToSend)
-            });
+            const res = await fetch(url, options);
             const data = await res.json();
             
             if(res.ok){
                 setResultado(data);
-                
+        
                 if(!editandoId) {
-                    if(data.credenciais && data.credenciais.senha_temporaria){
+                    // CADASTRAR (NOVO)
+                    if (data.credenciais) {
                         setCredenciaisGeradas({
-                            email: form.email,
+                            email: data.credenciais.usuario,
                             senha: data.credenciais.senha_temporaria
                         });
-                    } else {
-                        alert(data.message);
                     }
                     setForm(initialFormState); 
+                    setArquivoAdmin(null); 
+                    if (document.getElementById('adminFileInput')) document.getElementById('adminFileInput').value = "";
+                    alert('Cadastro realizado com sucesso!'); // Feedback visual simples
                 } else {
-                    alert(data.message); 
+                    // EDITAR (EXISTENTE)
+                    // === AQUI ESTAVA O ERRO ===
+                    // Antes estava: alert('Erro: ' + data.message);
+                    alert('Sucesso: ' + (data.message || 'Registro atualizado!'));
+                    
+                    // Sugestão: Sair do modo de edição e limpar
+                    setEditandoId(null);
+                    setForm(initialFormState);
                 }
-
             } else {
-                alert('Erro: ' + data.message);
+                // === IMPORTANTE ===
+                // Se res.ok for false, aí sim é um erro real vindo do backend
+                alert('Erro: ' + (data.message || 'Falha na operação'));
             }
         } catch(err) {
+            console.error(err);
             alert('Erro ao conectar com servidor');
         }
     };
@@ -411,6 +441,16 @@ export default function AdminDashboard(){
                                             <option value="">Selecione...</option>
                                             {listaFornecedores.map(f => <option key={f.id} value={f.id}>{f.nome_fantasia} - {f.cnpj}</option>)}
                                         </select>
+                                    </div>
+                                    <div style={{ gridColumn: '1 / -1' }}>
+                                        <label style={labelStyle}>Imagem do Produto</label>
+                                        <input 
+                                            id="adminFileInput"
+                                            type="file" 
+                                            accept="image/*"
+                                            onChange={(e) => setArquivoAdmin(e.target.files[0])}
+                                            style={{...inputStyle, padding: '5px'}}
+                                        />
                                     </div>
                                 </>
                             )}

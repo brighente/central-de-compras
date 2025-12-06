@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors'); // O "porteiro" que deixa o React chamar a API
 const db = require('./db'); // Importa o banco
+const path = require('path');
 
 const authRoutes = require('./routes/authRoutes'); // Importa a rota do login
 const adminRoutes = require('./routes/adminRoutes'); // Importa a rota de Admins
@@ -14,6 +15,8 @@ const perfilRoutes = require('./routes/perfilRoutes');
 const app = express();
 app.use(cors()); // Diz ao Express para usar o "porteiro" CORS
 app.use(express.json()); // Diz ao Express para entender JSON
+
+app.use('/uploads', express.static(path.resolve('uploads')));
 
 app.use('/api/auth', authRoutes); // Login -> POST /api/auth/login
 app.use('/api/produtos', produtosRoutes); // Produtos -> /api/produtos
