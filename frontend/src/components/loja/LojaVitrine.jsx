@@ -124,7 +124,7 @@ export default function LojaVitrine() {
                 {!loading && campanhas.length > 0 && (
                     <div style={styles.campanhaSection}>
                         <div style={styles.campanhaTitleContainer}>
-                            <span style={styles.campanhaTitleText}>Oportunidades Ativas</span>
+                            <span style={styles.campanhaTitleText}>Campanhas Ativas</span>
                         </div>
                         
                         <div style={styles.campanhaScroll} className="custom-scrollbar">
